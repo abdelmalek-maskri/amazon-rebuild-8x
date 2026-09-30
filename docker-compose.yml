@@ -6,11 +6,12 @@ services:
       POSTGRES_USER: store
       POSTGRES_PASSWORD: store
       POSTGRES_DB: store
-    # 5433 on the host so it never clashes with a locally installed Postgres on 5432.
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Runs only when the volume is first created: adds the store_test database for api tests.
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U store -d store"]
       interval: 2s
