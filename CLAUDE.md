@@ -32,9 +32,19 @@ docker compose up -d --wait     # local Postgres 17 on localhost:5433 (5432 is t
 cd web && npm run dev           # Next.js on :3000
 cd web && npm run build
 cd web && npm run lint
+
+cd api && cp .env.example .env  # first time only
+cd api && npm run dev           # Express on :4000, pretty logs
+cd api && npm run typecheck
+cd api && npm test              # Vitest + Supertest against the store_test database
+cd api && npx vitest run test/app.test.ts -t "404"   # one file, one test
+cd api && npm run db:generate   # SQL migration from src/db/schema.ts into api/drizzle/
+cd api && npm run db:migrate
 ```
 
-`api/` has folders only so far. Its commands will be added here when `api/package.json` exists.
+`store_test` is created by `docker/init.sql`, which only runs when the Docker volume is new
+(`docker compose down -v` to recreate). `vitest.config.ts` points tests at it; env vars already
+set win over `api/.env`.
 
 ## Architecture
 
@@ -48,6 +58,10 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   `routes.ts` (HTTP and Zod validation only), `service.ts` (business rules, never sees req or
   res) and `repo.ts` (the only place that queries the database). Modules call each other only
   through services. `app.ts` builds the app so tests can import it; `server.ts` listens.
+  Shared plumbing is in `api/src/lib/`: `env.ts` (Zod checked env, exits on bad config),
+  `logger.ts` (pino, request id), `errors.ts`. Throw `AppError(status, CODE, message)` or let
+  Zod throw; the one error handler turns everything into `{ error, message }` and never leaks
+  internals. ESM with `nodenext`, so relative imports end in `.js`.
 
 Request path: the browser only talks to the web domain. Next.js rewrites `/api/*` to the API,
 so cookies are first party and the API does not enable CORS. Server components call the API
