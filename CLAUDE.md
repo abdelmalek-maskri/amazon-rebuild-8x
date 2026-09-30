@@ -40,8 +40,12 @@ cd api && npm run typecheck
 cd api && npm test              # Vitest + Supertest against the store_test database
 cd api && npx vitest run test/app.test.ts -t "404"   # one file, one test
 cd api && npm run db:generate   # SQL migration from src/db/schema.ts into api/drizzle/
-cd api && npm run db:migrate
+cd api && npm run db:migrate    # applies api/drizzle/ with src/db/migrate.ts (not drizzle-kit migrate)
 ```
+
+Deploys: Railway builds `api/` with `npm run build`, runs `npm run db:migrate:prod` as the
+pre-deploy command, then `npm start`. Vercel builds `web/` and needs `API_URL` at build time,
+because the rewrite is fixed when `next build` runs.
 
 `store_test` is created by `docker/init.sql`, which only runs when the Docker volume is new
 (`docker compose down -v` to recreate). `vitest.config.ts` points tests at it; env vars already
