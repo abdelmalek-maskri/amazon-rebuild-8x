@@ -1,0 +1,21 @@
+# Local Postgres only. The apps run on the host with `npm run dev`.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: store
+      POSTGRES_PASSWORD: store
+      POSTGRES_DB: store
+    # 5433 on the host so it never clashes with a locally installed Postgres on 5432.
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U store -d store"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:
