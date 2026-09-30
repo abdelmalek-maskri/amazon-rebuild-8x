@@ -26,9 +26,10 @@ together with the code they produced. `CAPTURE-TEST.md` documents the setup.
 
 ## Commands
 
-```
+```bash
 docker compose up -d --wait     # local Postgres 17 on localhost:5433 (5432 is taken by a host Postgres)
 
+cd web && cp .env.example .env.local  # first time only; next.config.ts throws without API_URL
 cd web && npm run dev           # Next.js on :3000
 cd web && npm run build
 cd web && npm run lint
@@ -53,6 +54,10 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
 * `web/`: Next.js 16 App Router, React 19, Tailwind 4, TypeScript. UI only: it never
   computes prices, totals or stock. Next 16 has breaking changes; read the guides in
   `web/node_modules/next/dist/docs/` before writing web code (see `web/AGENTS.md`).
+  All API calls go through `web/lib/api.ts` (typed functions, `ApiError`, 10s timeout); it
+  defaults to `cache: "no-store"` because an uncached `fetch` is otherwise run once at build
+  time and frozen into the page. Prices render only through `formatPrice(cents)` in
+  `web/lib/format.ts`.
 * `api/`: Express 5, TypeScript, Zod, Drizzle, Postgres. A modular monolith with modules in
   `api/src/modules/` (`catalog`, `cart`, `orders`; Stripe lives in `orders`). Each module has
   `routes.ts` (HTTP and Zod validation only), `service.ts` (business rules, never sees req or
@@ -68,6 +73,7 @@ so cookies are first party and the API does not enable CORS. Server components c
 directly through the server only `API_URL`.
 
 Money and trust rules:
+
 * Money is integer cents everywhere. The server loads prices and stock from the database;
   never trust amounts from the browser.
 * Checkout creates a `pending` order with copied prices, then a Stripe Checkout Session.
