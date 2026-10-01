@@ -1,1 +1,46 @@
 @import "tailwindcss";
+
+/*
+ * Amazon's palette, so the store feels familiar. Components use these tokens only, never raw hex.
+ * Tailwind turns each --color-x into bg-x, text-x, border-x and so on.
+ */
+@theme static {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-nav: #131921;
+  --color-nav-light: #232f3e;
+  --color-page: #eaeded;
+  --color-surface: #ffffff;
+  --color-ink: #0f1111;
+  --color-muted: #565959;
+  --color-border: #d5d9d9;
+
+  --color-link: #007185;
+  --color-link-hover: #c7511f;
+
+  --color-cta: #ffd814;
+  --color-cta-hover: #f7ca00;
+  --color-cta-border: #fcd200;
+  --color-buy: #ffa41c;
+  --color-buy-hover: #fa8900;
+  --color-buy-border: #ff8f00;
+
+  --color-star: #de7921;
+  --color-success: #007600;
+  --color-warning: #b12704;
+  --color-danger: #cc0c39;
+  --color-focus: #c8f3fa;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-ink antialiased;
+  }
+
+  /* Amazon's own focus style: teal border plus a soft halo. Keyboard only, so mouse clicks stay clean. */
+  :focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--color-focus);
+  }
+}

@@ -68,7 +68,13 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   All API calls go through `web/lib/api.ts` (typed functions, `ApiError`, 10s timeout); it
   defaults to `cache: "no-store"` because an uncached `fetch` is otherwise run once at build
   time and frozen into the page. Prices render only through `formatPrice(cents)` in
-  `web/lib/format.ts`.
+  `web/lib/format.ts` (or the `Price` component, which uses it).
+  UI: Amazon's palette lives as tokens in `web/app/globals.css` (`@theme static`, so every
+  `--color-*` exists even before a class uses it); use `bg-cta`, `text-link` and so on, never raw
+  hex. Base components are in `web/components/ui/` and all appear on `/design` (not linked from the
+  store) for checking at 375px and 1280px. `useToast()` needs the `ToastProvider` in the root
+  layout. Product images must come from `cdn.dummyjson.com` (`images.remotePatterns`); use
+  `preload`, not the deprecated `priority`, on above-the-fold images.
 * `api/`: Express 5, TypeScript, Zod, Drizzle, Postgres. A modular monolith with modules in
   `api/src/modules/` (`catalog`, `cart`, `orders`; Stripe lives in `orders`). Each module has
   `routes.ts` (HTTP and Zod validation only), `service.ts` (business rules, never sees req or

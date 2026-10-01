@@ -12,3 +12,6 @@ next-env.d.ts
 .vercel/
 .DS_Store
 *.log
+
+# Playwright MCP screenshots and snapshots
+.playwright-mcp/
