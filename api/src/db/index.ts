@@ -14,4 +14,5 @@ export const pool = new pg.Pool({
 // Without a listener, an idle client losing its connection would crash the process
 pool.on("error", (err) => logger.error({ err }, "idle database client error"));
 
-export const db = drizzle({ client: pool, schema });
+// Must match `casing` in drizzle.config.ts, or queries and migrations disagree on column names.
+export const db = drizzle({ client: pool, schema, casing: "snake_case" });
