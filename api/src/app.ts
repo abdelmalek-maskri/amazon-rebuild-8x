@@ -9,6 +9,7 @@ import { cartRoutes } from "./modules/cart/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
 import { orderRoutes, webhookRoutes } from "./modules/orders/routes.js";
 import { reviewRoutes } from "./modules/reviews/routes.js";
+import { wishlistRoutes } from "./modules/wishlist/routes.js";
 
 export function createApp() {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp() {
   app.use(cartRoutes);
   app.use(reviewRoutes);
   app.use(orderRoutes);
+  app.use(wishlistRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

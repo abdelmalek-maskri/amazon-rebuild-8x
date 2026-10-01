@@ -156,6 +156,10 @@ Money and trust rules:
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
   on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
+* Wishlist (`api/src/modules/wishlist`): accounts only (401 for guests, except
+  `GET /wishlist/status/:productId`, which answers `{ saved: false }`). One row per shopper and
+  product, so saving twice is a no-op. Move to basket calls `cart/service.addItem`, so stock and
+  the 10 per item limit apply; the item leaves the list only after the basket accepts it.
 * Buyer-only reviews: `POST /products/:slug/reviews` needs a signed in shopper with a `paid`
   order containing the product (asked through `orders/service.hasPaidFor`, not a cross-module
   query). One review per shopper per product (`reviews_product_id_user_id_unique`), marked

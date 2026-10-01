@@ -190,3 +190,23 @@ export const reviews = pgTable(
     index("reviews_product_id_reviewed_at_idx").on(t.productId, t.reviewedAt),
   ],
 );
+
+export const wishlistItems = pgTable(
+  "wishlist_items",
+  {
+    id: id(),
+    // Both cascade: a saved item means nothing without the shopper or the product.
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (t) => [
+    // One row per shopper and product; it also serves "my list, newest first" by user_id.
+    unique("wishlist_items_user_id_product_id_unique").on(t.userId, t.productId),
+    index("wishlist_items_product_id_idx").on(t.productId),
+  ],
+);
