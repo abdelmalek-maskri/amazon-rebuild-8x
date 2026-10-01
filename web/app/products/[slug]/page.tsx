@@ -61,7 +61,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-1">
           <li>
-            <Link href={`/search?category=${product.category.slug}`} className="text-link hover:text-link-hover hover:underline">
+            <Link href={`/search?category=${product.category.slug}`} className="inline-flex min-h-11 items-center md:min-h-0 text-link hover:text-link-hover hover:underline">
               {product.category.name}
             </Link>
           </li>
@@ -78,7 +78,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
         <div className="flex flex-col gap-3">
           <h1 className="text-2xl leading-tight font-medium">{product.title}</h1>
           {product.brand && (
-            <Link href={`/search?brand=${encodeURIComponent(product.brand)}`} className="text-sm text-link hover:text-link-hover hover:underline">
+            <Link href={`/search?brand=${encodeURIComponent(product.brand)}`} className="inline-flex min-h-11 items-center md:min-h-0 self-start text-sm text-link hover:text-link-hover hover:underline">
               Visit the {product.brand} store
             </Link>
           )}

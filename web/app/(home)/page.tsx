@@ -62,7 +62,7 @@ function DepartmentCard({ slug, name, count, products, preload }: { slug: string
           </Link>
         ))}
       </div>
-      <Link href={`/search?category=${slug}`} className="mt-4 text-sm text-link hover:text-link-hover hover:underline">
+      <Link href={`/search?category=${slug}`} className="inline-flex min-h-11 items-center md:min-h-0 mt-4 text-sm text-link hover:text-link-hover hover:underline">
         See all {count} in {name}
       </Link>
     </article>
@@ -76,7 +76,7 @@ function ProductRow({ title, href, products }: { title: string; href: string; pr
       <div className="mb-4 flex items-baseline gap-4">
         <h2 className="text-xl font-bold">{title}</h2>
         <Link href={href} className="text-sm text-link hover:text-link-hover hover:underline">
-          See more
+          See more<span className="sr-only"> {title.toLowerCase()}</span>
         </Link>
       </div>
       {/* A grid that wraps, not a sideways scroller: every product is fully visible at every width. */}
