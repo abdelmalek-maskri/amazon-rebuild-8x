@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { PendingRefresh } from "@/components/order/pending-refresh";
 import { ButtonLink } from "@/components/ui/button";
-import { ApiError, getOrder, type Order } from "@/lib/api";
+import { ApiError, type Order } from "@/lib/api";
+import { getServerOrder, getServerUser } from "@/lib/server-session";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 
 const loadOrder = cache(async (id: string) => {
   try {
-    return await getOrder(id);
+    return await getServerOrder(id);
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 400)) return null;
     throw err;
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<"/orders/[id]">): P
 }
 
 export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
-  const order = await loadOrder((await params).id);
+  const [order, user] = await Promise.all([loadOrder((await params).id), getServerUser()]);
   if (!order) notFound();
 
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0);
@@ -71,8 +72,15 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
 
         <div className="flex flex-wrap justify-center gap-3">
           <ButtonLink href="/">Continue shopping</ButtonLink>
+          {user && (
+            <ButtonLink href="/orders" variant="secondary">
+              Your orders
+            </ButtonLink>
+          )}
         </div>
-        <p className="text-center text-xs text-muted">Keep this page&apos;s link: it&apos;s the only way to see this order without an account.</p>
+        {!user && (
+          <p className="text-center text-xs text-muted">Keep this page&apos;s link: it&apos;s the only way to see this order without an account.</p>
+        )}
       </div>
     </div>
   );

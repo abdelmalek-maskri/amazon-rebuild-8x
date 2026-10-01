@@ -12,7 +12,7 @@ const SESSION_MINUTES = 30;
 const emptyBasket = () => new AppError(409, "CART_EMPTY", "Your basket is empty.");
 
 // Prices, totals and stock all come from locked database rows; nothing the browser sent is trusted.
-export async function checkout(cartId: string | undefined) {
+export async function checkout(cartId: string | undefined, userId?: string) {
   if (!cartId) throw emptyBasket();
 
   const { orderId, lines } = await repo.transaction(async (tx) => {
@@ -26,7 +26,7 @@ export async function checkout(cartId: string | undefined) {
     }
     const total = lines.reduce((n, l) => n + l.priceCents * l.quantity, 0);
     const items = lines.map((l) => ({ productId: l.productId, title: l.title, unitPriceCents: l.priceCents, quantity: l.quantity }));
-    return { orderId: await repo.createOrder(tx, cartId, total, items), lines };
+    return { orderId: await repo.createOrder(tx, cartId, userId, total, items), lines };
   });
 
   let session: Stripe.Checkout.Session;
@@ -122,12 +122,29 @@ function maskEmail(email: string | null) {
   return `${name.slice(0, 1)}${"*".repeat(Math.max(1, Math.min(name.length - 1, 6)))}@${domain}`;
 }
 
-export async function getOrder(orderId: string) {
-  const order = await repo.findOrder(orderId);
-  if (!order) throw new AppError(404, "ORDER_NOT_FOUND", "We couldn't find that order.");
+// A guest order opens for anyone holding its link. An account's order opens only for that
+// account; anyone else gets the same 404 as for an order that doesn't exist.
+export async function getOrder(orderId: string, viewerId: string | undefined) {
+  const found = await repo.findOrder(orderId);
+  if (!found || (found.userId && found.userId !== viewerId)) throw new AppError(404, "ORDER_NOT_FOUND", "We couldn't find that order.");
+  const { userId: _owner, ...order } = found;
   return {
     ...order,
     email: maskEmail(order.email),
     items: order.items.map((i) => ({ ...i, lineTotalCents: i.unitPriceCents * i.quantity })),
+  };
+}
+
+export async function listOrders(userId: string, page: number, pageSize: number) {
+  const { rows, total } = await repo.listUserOrders(userId, pageSize, (page - 1) * pageSize);
+  const items = await repo.itemsForOrders(rows.map((r) => r.id));
+  return {
+    items: rows.map((o) => {
+      const lines = items.filter((i) => i.orderId === o.id).map(({ orderId: _id, ...line }) => line);
+      return { ...o, itemCount: lines.reduce((n, l) => n + l.quantity, 0), lines };
+    }),
+    total,
+    page,
+    pageSize,
   };
 }

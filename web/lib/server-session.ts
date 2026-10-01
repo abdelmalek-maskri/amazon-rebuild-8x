@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ApiError, getCart, getMe, type Cart, type User } from "@/lib/api";
+import { ApiError, getCart, getMe, getOrder, listOrders, type Cart, type User } from "@/lib/api";
 
 const EMPTY: Cart = { items: [], itemCount: 0, subtotalCents: 0 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,4 +35,15 @@ export async function getHeaderState(): Promise<{ basketCount: number; user: Use
     basketCount: cart.status === "fulfilled" ? cart.value.itemCount : 0,
     user: user.status === "fulfilled" ? user.value : null,
   };
+}
+
+export async function getServerOrder(id: string) {
+  return getOrder(id, await forwardedCookie());
+}
+
+// Null when signed out, so the page can send the shopper to sign in.
+export async function getServerOrders(page = 1) {
+  const cookie = await forwardedCookie();
+  if (!cookie || !(await getServerUser())) return null;
+  return listOrders(cookie, page);
 }

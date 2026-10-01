@@ -76,6 +76,9 @@ function SignedInMenu({ user }: { user: User }) {
         className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-border bg-surface p-2 text-sm text-ink shadow-xl"
       >
         <p className="truncate px-2 py-1 text-xs text-muted">Signed in as {user.email}</p>
+        <Link href="/orders" onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded px-2 hover:bg-page">
+          Your Orders
+        </Link>
         <button
           type="button"
           onClick={doSignOut}

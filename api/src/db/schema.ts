@@ -114,6 +114,8 @@ export const orders = pgTable(
     status: orderStatus().notNull().default("pending"),
     // Set null rather than cascade: an order outlives the cart it came from.
     cartId: uuid().references(() => carts.id, { onDelete: "set null" }),
+    // Null for guest orders, which are reached by their link alone. Set: only that account may open it.
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
     // Filled from the Stripe session once the shopper pays.
     email: text(),
     totalCents: integer().notNull(),
@@ -124,6 +126,8 @@ export const orders = pgTable(
   (t) => [
     check("orders_total_cents_nonnegative", sql`${t.totalCents} >= 0`),
     index("orders_cart_id_idx").on(t.cartId),
+    // Serves "Your Orders", newest first.
+    index("orders_user_id_created_at_idx").on(t.userId, t.createdAt),
   ],
 );
 

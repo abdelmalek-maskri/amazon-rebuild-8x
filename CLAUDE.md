@@ -48,6 +48,13 @@ Deploys: Railway builds `api/` with `npm run build`, runs `npm run db:deploy` (m
 seed) as the pre-deploy command, then `npm start`. Vercel builds `web/` and needs `API_URL` at build time,
 because the rewrite is fixed when `next build` runs.
 
+Tests must serve the app with `serve()` from `test/helpers.ts` (it listens on 127.0.0.1) and
+call `closeServers()` in `afterAll`. Passing `createApp()` straight to Supertest makes it listen
+on `::` but dial 127.0.0.1, and on macOS that port can belong to another program (VS Code's
+helpers), which caused random 404s, empty bodies and hangs. `vitest.config.ts` sets both
+`fileParallelism: false` and `maxWorkers: 1`; with only the first, files sometimes overlapped
+and one file's `resetDb()` wiped another's rows.
+
 `store_test` is created by `docker/init.sql`, which only runs when the Docker volume is new
 (`docker compose down -v` to recreate). `test/global-setup.ts` drops and re-migrates it before
 every run; test files run serially and call `resetDb()` from `test/helpers.ts`. Env vars already
@@ -145,6 +152,11 @@ Money and trust rules:
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
   on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
+* Orders and accounts: checkout stores `orders.user_id` when signed in. `GET /orders` (401 for
+  guests) lists only that account's non-pending orders, newest first. `GET /orders/:id` opens a
+  guest order for anyone with the link, but an account's order only for that account (404
+  otherwise). Web server code fetches orders through `getServerOrder`/`getServerOrders` so the
+  session is forwarded.
 * Guests are identified by an httpOnly cart cookie; orders are reached by their UUID.
 * Cart (`api/src/modules/cart`): the `cart_id` cookie (httpOnly, SameSite=Lax, Secure in
   production, 30 days) is set only on the first add, and any value that isn't a UUID of an
