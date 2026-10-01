@@ -7,7 +7,8 @@ import { BuyBox } from "@/components/product/buy-box";
 import { Gallery } from "@/components/product/gallery";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
-import { ApiError, getProduct, searchProducts } from "@/lib/api";
+import { Reviews } from "@/components/product/reviews";
+import { ApiError, getProduct, getProductReviews, searchProducts, type ReviewPage } from "@/lib/api";
 
 // One request per render, shared by generateMetadata and the page.
 const loadProduct = cache(async (slug: string) => {
@@ -30,12 +31,28 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
   };
 }
 
-export default async function ProductPage({ params }: PageProps<"/products/[slug]">) {
+// Reviews are a section of the page, not the page: if they fail, the product is still shown and buyable.
+async function loadReviews(slug: string, stars?: number): Promise<ReviewPage | null> {
+  try {
+    return await getProductReviews(slug, stars);
+  } catch (err) {
+    if (err instanceof ApiError) return null;
+    throw err;
+  }
+}
+
+export default async function ProductPage({ params, searchParams }: PageProps<"/products/[slug]">) {
   const product = await loadProduct((await params).slug);
   // Outside any try/catch: notFound() works by throwing.
   if (!product) notFound();
 
-  const related = await searchProducts({ category: product.category.slug, sort: "featured", pageSize: 7 });
+  // ?stars=5 filters the reviews; anything else is ignored rather than sent to the API.
+  const rawStars = (await searchParams).stars;
+  const stars = typeof rawStars === "string" && /^[1-5]$/.test(rawStars) ? Number(rawStars) : undefined;
+  const [related, reviews] = await Promise.all([
+    searchProducts({ category: product.category.slug, sort: "featured", pageSize: 7 }),
+    loadReviews(product.slug, stars),
+  ]);
   const more = related.items.filter((p) => p.id !== product.id).slice(0, 6);
   const images = product.images.length ? product.images : [product.imageUrl];
 
@@ -65,7 +82,11 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
               Visit the {product.brand} store
             </Link>
           )}
-          {product.ratingCount > 0 && <Rating value={product.ratingAvg} count={product.ratingCount} />}
+          {product.ratingCount > 0 && (
+            <a href="#reviews" className="self-start rounded hover:underline">
+              <Rating value={product.ratingAvg} count={product.ratingCount} />
+            </a>
+          )}
           <hr className="border-border" />
           {/* On phones the buy box sits further down; the price still belongs at the top. */}
           <div className="lg:hidden">
@@ -95,6 +116,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
           </div>
         </aside>
       </div>
+
+      {reviews && <Reviews slug={product.slug} data={reviews} />}
 
       {more.length > 0 && (
         <section aria-labelledby="more" className="mt-10 border-t border-border pt-6">

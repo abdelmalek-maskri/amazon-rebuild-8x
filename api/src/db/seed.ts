@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { logger } from "../lib/logger.js";
 import { db, pool } from "./index.js";
-import { categories, products } from "./schema.js";
+import { categories, products, reviews } from "./schema.js";
 
 // api/data/products.json, reachable from both src/db (tsx) and dist/db (compiled).
 const SNAPSHOT = new URL("../../data/products.json", import.meta.url);
@@ -21,7 +21,14 @@ const Snapshot = z.object({
         stock: z.number().int().nonnegative(),
         thumbnail: z.url(),
         images: z.array(z.url()),
-        reviews: z.array(z.object({ rating: z.number().int().min(1).max(5) })),
+        reviews: z.array(
+          z.object({
+            rating: z.number().int().min(1).max(5),
+            comment: z.string().min(1),
+            date: z.iso.datetime(),
+            reviewerName: z.string().min(1),
+          }),
+        ),
       }),
     )
     .min(1),
@@ -54,10 +61,21 @@ try {
         ratingCount: p.reviews.length,
       };
     });
-    return tx.insert(products).values(rows).onConflictDoNothing({ target: products.slug }).returning({ id: products.id });
+    const added = await tx.insert(products).values(rows).onConflictDoNothing({ target: products.slug }).returning({ id: products.id });
+
+    // Reviews only for products that have none yet, so re-runs never duplicate them.
+    const productId = new Map((await tx.select({ id: products.id, slug: products.slug }).from(products)).map((p) => [p.slug, p.id]));
+    const reviewed = new Set((await tx.selectDistinct({ productId: reviews.productId }).from(reviews)).map((r) => r.productId));
+    const reviewRows = snapshot.products.flatMap((p) => {
+      const id = productId.get(p.slug);
+      if (!id || reviewed.has(id)) return [];
+      return p.reviews.map((r) => ({ productId: id, rating: r.rating, body: r.comment, authorName: r.reviewerName, reviewedAt: new Date(r.date) }));
+    });
+    if (reviewRows.length) await tx.insert(reviews).values(reviewRows);
+    return { products: added.length, reviews: reviewRows.length };
   });
 
-  logger.info({ inserted: inserted.length, inSnapshot: snapshot.products.length }, "seed complete");
+  logger.info({ inserted: inserted.products, reviewsInserted: inserted.reviews, inSnapshot: snapshot.products.length }, "seed complete");
 } catch (err) {
   logger.error({ err }, "seed failed");
   process.exitCode = 1;

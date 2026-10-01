@@ -6,6 +6,7 @@ import { errorHandler, notFound } from "./lib/errors.js";
 import { httpLogger } from "./lib/logger.js";
 import { cartRoutes } from "./modules/cart/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
+import { reviewRoutes } from "./modules/reviews/routes.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
 
   app.use(catalogRoutes);
   app.use(cartRoutes);
+  app.use(reviewRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

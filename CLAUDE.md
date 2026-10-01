@@ -131,3 +131,8 @@ Money and trust rules:
   check stock and the 10 per line limit before writing, so races can't oversell and errors are
   409s with a readable message, not constraint 500s. Lines are always looked up by item id
   AND cart id, so another shopper's line is a 404.
+* Reviews (`api/src/modules/reviews`): `GET /products/:slug/reviews?stars&sort&page` returns the
+  list plus `average`, `count` and a five level `breakdown` that always covers every review,
+  whatever filter is applied. Reviews are seeded from the snapshot only for products that have
+  none, so `db:deploy` can run on every deploy. `products.rating_avg`/`rating_count` are derived
+  from the same reviews, so the stars on cards and the review section always agree.
