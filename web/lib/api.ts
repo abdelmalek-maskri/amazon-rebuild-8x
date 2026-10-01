@@ -127,6 +127,16 @@ export function searchProducts(query: ProductQuery = {}) {
   return apiFetch<ProductPage>(`/products${qs ? `?${qs}` : ""}`);
 }
 
+export type ProductDetail = ProductSummary & {
+  description: string;
+  images: string[];
+  category: { slug: string; name: string };
+};
+
+export function getProduct(slug: string) {
+  return apiFetch<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
+}
+
 export type Suggestions = {
   products: Pick<ProductSummary, "slug" | "title" | "brand" | "imageUrl">[];
   categories: { slug: string; name: string }[];

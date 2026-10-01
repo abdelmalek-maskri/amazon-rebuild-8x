@@ -83,6 +83,10 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   dropped, never sent to the API) and builds every filter, sort and page link with
   `searchHref(state, patch)`, which resets to page 1 unless the patch sets `page`. Filters are
   plain links so they work without JavaScript; on phones they sit in a native `<details>`.
+  A `loading.tsx` streams the response, which fixes the status at 200, so `notFound()` then
+  can't send a 404. Product pages have no `loading.tsx` so unknown slugs return a real 404, and
+  the home skeleton lives in the `app/(home)/` route group so it doesn't wrap other routes.
+  Never call `notFound()` inside a try/catch: it works by throwing.
 * `api/`: Express 5, TypeScript, Zod, Drizzle, Postgres. A modular monolith with modules in
   `api/src/modules/` (`catalog`, `cart`, `orders`; Stripe lives in `orders`). Each module has
   `routes.ts` (HTTP and Zod validation only), `service.ts` (business rules, never sees req or
