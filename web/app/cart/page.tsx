@@ -90,7 +90,7 @@ export default async function CartPage() {
           <aside aria-label="Order summary" className="order-first flex flex-col gap-4 lg:sticky lg:top-4 lg:order-none lg:w-80">
             <div className="bg-surface p-4 sm:p-6">
               <p className="text-lg">{subtotal}</p>
-              <CheckoutButton blocked={blocked} />
+              <CheckoutButton blocked={blocked} signedIn={!!user} />
               {/* A nudge, never a gate: guests check out exactly as before. */}
               {!user && (
                 <p className="mt-3 border-t border-border pt-3 text-center text-xs">

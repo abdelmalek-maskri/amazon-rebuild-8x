@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, checkout } from "@/lib/api";
 
 // The server creates the order from the basket it holds, then hands back Stripe's payment page.
-export function CheckoutButton({ blocked }: { blocked: boolean }) {
+export function CheckoutButton({ blocked, signedIn }: { blocked: boolean; signedIn: boolean }) {
   const [error, setError] = useState("");
   const [redirecting, setRedirecting] = useState(false);
 
@@ -23,9 +23,11 @@ export function CheckoutButton({ blocked }: { blocked: boolean }) {
     }
   }
 
+  const note = blocked ? "Fix the items marked in red to check out." : signedIn ? "" : "Check out as a guest.";
+
   return (
     <>
-      <Button fullWidth className="mt-4" disabled={blocked} loading={redirecting} onClick={go} aria-describedby="checkout-note">
+      <Button fullWidth className="mt-4" disabled={blocked} loading={redirecting} onClick={go} aria-describedby={note ? "checkout-note" : undefined}>
         {redirecting ? "Opening secure payment" : "Proceed to checkout"}
       </Button>
       {error ? (
@@ -33,9 +35,11 @@ export function CheckoutButton({ blocked }: { blocked: boolean }) {
           {error}
         </p>
       ) : (
-        <p id="checkout-note" className="mt-2 text-center text-xs text-muted">
-          {blocked ? "Fix the items marked in red to check out." : "You'll pay on Stripe's secure page. Test mode: use card 4242 4242 4242 4242."}
-        </p>
+        note && (
+          <p id="checkout-note" className="mt-2 text-center text-xs text-muted">
+            {note}
+          </p>
+        )
       )}
     </>
   );
