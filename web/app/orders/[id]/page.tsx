@@ -3,7 +3,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { CancelButton } from "@/components/order/cancel-button";
 import { PendingRefresh } from "@/components/order/pending-refresh";
+import { RetryRefund } from "@/components/order/retry-refund";
+import { Timeline } from "@/components/order/timeline";
 import { ButtonLink } from "@/components/ui/button";
 import { ApiError, type Order } from "@/lib/api";
 import { getServerOrder, getServerUser } from "@/lib/server-session";
@@ -37,6 +40,21 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
     <div className="flex-1 bg-page pb-12">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-3 py-6 sm:px-4">
         <StatusBanner order={order} />
+
+        {order.paidAt && (
+          <section aria-labelledby="tracking" className="flex flex-col gap-4 bg-surface p-4 sm:flex-row sm:justify-between sm:p-6">
+            <div>
+              <h2 id="tracking" className="mb-3 text-lg font-bold">
+                Tracking
+              </h2>
+              <Timeline steps={order.steps} />
+              {order.fulfilment && <p className="mt-3 text-xs text-muted">Shipping is simulated in this demo.</p>}
+            </div>
+            {order.canCancel && order.cancelBy && <CancelButton orderId={order.id} totalCents={order.totalCents} cancelBy={order.cancelBy} />}
+            {/* A cancelled order whose refund failed: the same action retries just the refund. */}
+            {order.status === "cancelled" && <RetryRefund orderId={order.id} />}
+          </section>
+        )}
 
         <section aria-labelledby="items" className="bg-surface p-4 sm:p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3">
@@ -87,32 +105,45 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
 }
 
 function StatusBanner({ order }: { order: Order }) {
-  const tone = order.status === "paid" ? "border-success" : order.status === "needs_refund" ? "border-warning" : "border-border";
+  const good = order.status === "paid";
+  // A finished refund is a settled outcome, not a problem: neutral, not red.
+  const problem = order.status === "cancelled" || order.status === "needs_refund";
+  const tone = good ? "border-success" : problem ? "border-warning" : "border-border";
+  const [title, body] = bannerText(order);
   return (
     <section aria-live="polite" className={cn("border-l-4 bg-surface p-4 sm:p-6", tone)}>
-      {order.status === "paid" && (
-        <>
-          <h1 className="text-xl font-bold text-success">Order placed, thank you!</h1>
-          <p className="mt-1 text-sm">{order.email ? `Payment received. Order confirmation for ${order.email}.` : "Payment received."}</p>
-        </>
-      )}
-      {order.status === "pending" && (
-        <>
-          <h1 className="text-xl font-bold">Almost done</h1>
-          <div className="mt-1">
-            <PendingRefresh />
-          </div>
-        </>
-      )}
-      {order.status === "needs_refund" && (
-        <>
-          <h1 className="text-xl font-bold text-warning">We couldn&apos;t complete this order</h1>
-          <p className="mt-1 text-sm">
-            Your payment went through, but an item sold out before we could reserve it. We haven&apos;t sent anything, and the
-            order is flagged for a full refund.
-          </p>
-        </>
+      <h1 className={cn("text-xl font-bold", good ? "text-success" : problem && "text-warning")}>{title}</h1>
+      {order.status === "pending" ? (
+        <div className="mt-1">
+          <PendingRefresh />
+        </div>
+      ) : (
+        <p className="mt-1 text-sm">{body}</p>
       )}
     </section>
   );
+}
+
+function bannerText(order: Order): [string, string] {
+  const total = formatPrice(order.totalCents);
+  switch (order.status) {
+    case "pending":
+      return ["Almost done", ""];
+    case "paid":
+      if (order.fulfilment === "delivered") return ["Delivered", "Your order has arrived."];
+      if (order.fulfilment === "shipped") return ["On its way", "Your order has shipped."];
+      return ["Order placed, thank you!", order.email ? `Payment received. Order confirmation for ${order.email}.` : "Payment received."];
+    case "cancelled":
+      return ["Order cancelled", `Your refund of ${total} hasn't gone through yet. Use "Retry refund" below, or try again in a moment.`];
+    case "refunded":
+      return [
+        order.cancelledAt ? "Order cancelled and refunded" : "Order refunded",
+        `${total} has been refunded to your card. It can take a few days to show on your statement.`,
+      ];
+    case "needs_refund":
+      return [
+        "We couldn't complete this order",
+        "Your payment went through, but an item sold out before we could reserve it. Nothing was sent, and your payment is being refunded.",
+      ];
+  }
 }

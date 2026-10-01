@@ -200,7 +200,8 @@ export function checkout(buyNow?: { productId: string; quantity: number }) {
   return apiFetch<{ orderId: string; url: string }>("/checkout", { method: "POST", ...(buyNow ? { body: JSON.stringify(buyNow) } : {}) });
 }
 
-export type OrderStatus = "pending" | "paid" | "needs_refund";
+export type OrderStatus = "pending" | "paid" | "needs_refund" | "cancelled" | "refunded";
+export type Fulfilment = "processing" | "shipped" | "delivered" | null;
 
 export type Order = {
   id: string;
@@ -209,15 +210,25 @@ export type Order = {
   totalCents: number;
   createdAt: string;
   paidAt: string | null;
+  cancelledAt: string | null;
+  refundedAt: string | null;
+  steps: { key: string; label: string; at: string | null; done: boolean }[];
+  fulfilment: Fulfilment;
+  canCancel: boolean;
+  cancelBy: string | null;
   items: { title: string; unitPriceCents: number; quantity: number; lineTotalCents: number; product: { slug: string; imageUrl: string } }[];
 };
+
+export function cancelOrder(id: string) {
+  return apiFetch<Order>(`/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+}
 
 // An account's order only opens for that account, so server code passes the session along.
 export function getOrder(id: string, cookie?: string) {
   return apiFetch<Order>(`/orders/${encodeURIComponent(id)}`, cookie ? { headers: { Cookie: cookie } } : {});
 }
 
-export type OrderSummary = Pick<Order, "id" | "status" | "totalCents" | "createdAt"> & {
+export type OrderSummary = Pick<Order, "id" | "status" | "totalCents" | "createdAt" | "fulfilment"> & {
   itemCount: number;
   lines: { title: string; quantity: number; product: { slug: string; imageUrl: string } }[];
 };

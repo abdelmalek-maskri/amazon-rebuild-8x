@@ -11,6 +11,7 @@ const WEBHOOK_SECRET = "whsec_test_fake";
 
 // Stripe's network call is replaced; everything on our side, including signature checks, is real.
 const createSession = vi.spyOn(stripe.checkout.sessions, "create");
+const createRefund = vi.spyOn(stripe.refunds, "create");
 let sessionCount = 0;
 
 beforeEach(async () => {
@@ -20,6 +21,8 @@ beforeEach(async () => {
     sessionCount += 1;
     return { id: `cs_test_${sessionCount}`, url: `https://checkout.stripe.test/${sessionCount}` };
   }) as never);
+  createRefund.mockReset();
+  createRefund.mockImplementation((async () => ({ id: `re_test_${crypto.randomUUID()}` })) as never);
 });
 afterAll(async () => {
   await closeServers();
@@ -57,6 +60,7 @@ function paidSession(order: { id: string; stripeSessionId: string | null; totalC
     amount_total: order.totalCents,
     currency: "usd",
     metadata: { orderId: order.id },
+    payment_intent: `pi_for_${order.id}`,
     customer_details: { email: "shopper@example.com" },
     ...extra,
   };
@@ -146,18 +150,19 @@ describe("POST /webhooks/stripe", () => {
     expect(await stockOf(p!.id)).toBe(3);
   });
 
-  it("flags the order for a refund instead of overselling when stock ran out meanwhile", async () => {
+  it("refunds automatically instead of overselling when stock ran out meanwhile", async () => {
     const { order, products: [p] } = await checkedOut({ priceCents: 500, stock: 2, quantity: 2 });
     await db.update(products).set({ stock: 1 }).where(eq(products.id, p!.id));
     await sendEvent("checkout.session.completed", paidSession(order)).expect(200);
-    expect(await statusOf(order.id)).toBe("needs_refund");
+    expect(await statusOf(order.id)).toBe("refunded");
     expect(await stockOf(p!.id)).toBe(1);
+    expect(createRefund).toHaveBeenCalledWith({ payment_intent: `pi_for_${order.id}` }, { idempotencyKey: `refund-${order.id}` });
   });
 
   it("flags the order when the amount charged differs from the order total", async () => {
     const { order, products: [p] } = await checkedOut({ priceCents: 500, stock: 5, quantity: 1 });
     await sendEvent("checkout.session.completed", paidSession(order, { amount_total: 1 })).expect(200);
-    expect(await statusOf(order.id)).toBe("needs_refund");
+    expect(await statusOf(order.id)).toBe("refunded");
     expect(await stockOf(p!.id)).toBe(5);
   });
 
@@ -302,5 +307,100 @@ describe("Buy Now", () => {
     const res = await agent.post("/checkout").send({ productId: product.id }).expect(201);
     const [order] = await db.select().from(orders).where(eq(orders.id, res.body.orderId));
     expect(order!.userId).not.toBeNull();
+  });
+});
+
+describe("cancel and refund", () => {
+  async function paidOrder(quantity = 2) {
+    const result = await checkedOut({ priceCents: 500, stock: 5, quantity });
+    await sendEvent("checkout.session.completed", paidSession(result.order)).expect(200);
+    return result;
+  }
+  const backdate = (id: string, ms: number) => db.update(orders).set({ paidAt: new Date(Date.now() - ms) }).where(eq(orders.id, id));
+
+  it("cancels before shipping: puts the stock back and refunds the payment once", async () => {
+    const { order, products: [p] } = await paidOrder(2);
+    expect(await stockOf(p!.id)).toBe(3);
+    const res = await request(app).post(`/orders/${order.id}/cancel`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: "refunded", canCancel: false });
+    expect(res.body.steps.map((s: { key: string }) => s.key)).toEqual(["placed", "paid", "cancelled", "refunded"]);
+    expect(await stockOf(p!.id)).toBe(5);
+    expect(createRefund).toHaveBeenCalledTimes(1);
+    expect(createRefund).toHaveBeenCalledWith({ payment_intent: `pi_for_${order.id}` }, { idempotencyKey: `refund-${order.id}` });
+  });
+
+  it("refuses a second cancel and never restocks twice", async () => {
+    const { order, products: [p] } = await paidOrder(2);
+    await request(app).post(`/orders/${order.id}/cancel`).expect(200);
+    const again = await request(app).post(`/orders/${order.id}/cancel`);
+    expect(again.status).toBe(409);
+    expect(again.body.error).toBe("ALREADY_REFUNDED");
+    expect(await stockOf(p!.id)).toBe(5);
+  });
+
+  it("refuses once the order has shipped", async () => {
+    const { order, products: [p] } = await paidOrder(2);
+    await backdate(order.id, 31 * 60_000);
+    const res = await request(app).post(`/orders/${order.id}/cancel`);
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("ALREADY_SHIPPED");
+    expect(await stockOf(p!.id)).toBe(3);
+    expect(createRefund).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unpaid order", async () => {
+    const { order } = await checkedOut({ priceCents: 500, stock: 5, quantity: 1 });
+    expect((await request(app).post(`/orders/${order.id}/cancel`)).body.error).toBe("NOT_PAID");
+  });
+
+  it("keeps the order cancelled when Stripe fails, and a retry refunds it", async () => {
+    const { order, products: [p] } = await paidOrder(2);
+    createRefund.mockRejectedValueOnce(new Error("Stripe is down"));
+    const failed = await request(app).post(`/orders/${order.id}/cancel`);
+    expect(failed.status).toBe(502);
+    expect(failed.body.error).toBe("REFUND_FAILED");
+    expect(await statusOf(order.id)).toBe("cancelled");
+    expect(await stockOf(p!.id)).toBe(5);
+
+    const retry = await request(app).post(`/orders/${order.id}/cancel`);
+    expect(retry.status).toBe(200);
+    expect(retry.body.status).toBe("refunded");
+    // Restocked once only, and both calls used the same key, so Stripe can't refund twice.
+    expect(await stockOf(p!.id)).toBe(5);
+    expect(createRefund.mock.calls.map((c) => c[1])).toEqual([{ idempotencyKey: `refund-${order.id}` }, { idempotencyKey: `refund-${order.id}` }]);
+  });
+
+  it("lets only the owner cancel an account's order", async () => {
+    const owner = request.agent(serve());
+    await owner.post("/auth/signup").send({ email: "ada@example.com", name: "Ada", password: "a long password" }).expect(201);
+    const product = await createProduct({ priceCents: 500, stock: 5 });
+    await owner.post("/cart/items").send({ productId: product.id }).expect(201);
+    const { body } = await owner.post("/checkout").expect(201);
+    const [order] = await db.select().from(orders).where(eq(orders.id, body.orderId));
+    await sendEvent("checkout.session.completed", paidSession(order!)).expect(200);
+
+    expect((await request(app).post(`/orders/${order!.id}/cancel`)).status).toBe(404);
+    expect(await statusOf(order!.id)).toBe("paid");
+    expect((await owner.post(`/orders/${order!.id}/cancel`)).status).toBe(200);
+  });
+
+  it("follows a refund made in Stripe's dashboard", async () => {
+    const { order } = await paidOrder(1);
+    const charge = { object: "charge", payment_intent: `pi_for_${order.id}`, refunded: true, refunds: { data: [{ id: "re_dashboard" }] } };
+    const payload = JSON.stringify({ id: "evt_refund", object: "event", type: "charge.refunded", data: { object: charge } });
+    const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET });
+    await request(app).post("/webhooks/stripe").set("Content-Type", "application/json").set("Stripe-Signature", signature).send(payload).expect(200);
+    expect(await statusOf(order.id)).toBe("refunded");
+  });
+
+  it("shows simulated shipping on the timeline and when cancelling closes", async () => {
+    const { order } = await paidOrder(1);
+    const fresh = (await request(app).get(`/orders/${order.id}`)).body;
+    expect(fresh).toMatchObject({ fulfilment: "processing", canCancel: true });
+    expect(fresh.steps.map((s: { key: string; done: boolean }) => `${s.key}:${s.done}`)).toEqual(["placed:true", "paid:true", "shipped:false", "delivered:false"]);
+    await backdate(order.id, 2 * 24 * 60 * 60_000);
+    const later = (await request(app).get(`/orders/${order.id}`)).body;
+    expect(later).toMatchObject({ fulfilment: "delivered", canCancel: false, cancelBy: null });
   });
 });

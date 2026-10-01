@@ -92,8 +92,42 @@ export async function decrementStock(tx: Tx, productId: string, quantity: number
     .where(eq(products.id, productId));
 }
 
-export async function markOrder(tx: Tx, orderId: string, status: "paid" | "needs_refund", email: string | null) {
-  await tx.update(orders).set({ status, email, paidAt: new Date() }).where(eq(orders.id, orderId));
+export async function markOrder(
+  tx: Tx,
+  orderId: string,
+  status: "paid" | "needs_refund",
+  email: string | null,
+  paymentIntentId: string | null,
+) {
+  await tx.update(orders).set({ status, email, paidAt: new Date(), stripePaymentIntentId: paymentIntentId }).where(eq(orders.id, orderId));
+}
+
+export async function markCancelled(tx: Tx, orderId: string) {
+  await tx.update(orders).set({ status: "cancelled", cancelledAt: new Date() }).where(eq(orders.id, orderId));
+}
+
+// The items never left, so they go back on sale.
+export async function restock(tx: Tx, items: { productId: string; quantity: number }[]) {
+  for (const i of items) {
+    await tx
+      .update(products)
+      .set({ stock: sql`${products.stock} + ${i.quantity}`, updatedAt: new Date() })
+      .where(eq(products.id, i.productId));
+  }
+}
+
+// Only from a state that is waiting for money back (or a paid order refunded in Stripe's dashboard);
+// running twice changes nothing.
+export async function markRefunded(orderId: string, refundId: string | null) {
+  await db
+    .update(orders)
+    .set({ status: "refunded", refundedAt: new Date(), stripeRefundId: refundId })
+    .where(and(eq(orders.id, orderId), inArray(orders.status, ["cancelled", "needs_refund", "paid"])));
+}
+
+export async function findByPaymentIntent(paymentIntentId: string) {
+  const [row] = await db.select({ id: orders.id, status: orders.status }).from(orders).where(eq(orders.stripePaymentIntentId, paymentIntentId));
+  return row;
 }
 
 export async function emptyCart(tx: Tx, cartId: string) {
@@ -110,6 +144,9 @@ export async function findOrder(orderId: string) {
       totalCents: orders.totalCents,
       createdAt: orders.createdAt,
       paidAt: orders.paidAt,
+      cancelledAt: orders.cancelledAt,
+      refundedAt: orders.refundedAt,
+      stripePaymentIntentId: orders.stripePaymentIntentId,
     })
     .from(orders)
     .where(eq(orders.id, orderId));
@@ -133,7 +170,7 @@ export async function listUserOrders(userId: string, limit: number, offset: numb
   const where = and(eq(orders.userId, userId), ne(orders.status, "pending"));
   const [rows, [totalRow]] = await Promise.all([
     db
-      .select({ id: orders.id, status: orders.status, totalCents: orders.totalCents, createdAt: orders.createdAt })
+      .select({ id: orders.id, status: orders.status, totalCents: orders.totalCents, createdAt: orders.createdAt, paidAt: orders.paidAt })
       .from(orders)
       .where(where)
       .orderBy(desc(orders.createdAt), asc(orders.id))
