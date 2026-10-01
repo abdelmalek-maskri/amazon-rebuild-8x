@@ -34,15 +34,6 @@ No real money moves. Stripe runs in test mode, and the API refuses to start with
 * Header with "Hello, name", an account menu and a live basket count
 * **Buy Now**, which goes straight to payment and leaves the basket alone
 
-### Not built yet
-
-An AI review summary, verified purchase badges and a wish list. These were
-planned last on purpose, so the core path could be finished properly first.
-
-> **Screenshots to add:**
-> search results with filters (`docs/screenshots/search.png`),
-> product page with the buy box and reviews (`docs/screenshots/product.png`)
-
 ## Better than Amazon, on purpose
 
 I went through amazon.co.uk as a guest on 30 September 2026 and noted what slowed me down.
