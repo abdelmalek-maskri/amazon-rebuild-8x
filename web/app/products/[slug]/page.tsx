@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ProductCard } from "@/components/product-card";
 import { BuyBox } from "@/components/product/buy-box";
+import { CustomerSnapshot } from "@/components/product/customer-snapshot";
 import { Gallery } from "@/components/product/gallery";
-import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { Reviews } from "@/components/product/reviews";
 import { ApiError, getProduct, getProductReviews, searchProducts, type ReviewEligibility, type ReviewPage } from "@/lib/api";
@@ -75,7 +75,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
 
   return (
     <div className="mx-auto w-full max-w-375 px-3 pt-4 pb-12 sm:px-4">
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
+      <nav aria-label="Breadcrumb" className="mx-auto mb-4 max-w-6xl text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-1">
           <li>
             <Link href={`/search?category=${product.category.slug}`} className="inline-flex min-h-11 items-center md:min-h-0 text-link hover:text-link-hover hover:underline">
@@ -89,49 +89,58 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
         </ol>
       </nav>
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_17rem]">
-        <Gallery images={images} title={product.title} />
+      {/* Two columns: the photos stay in view while the right side reads top to bottom. */}
+      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div className="md:sticky md:top-4 md:self-start">
+          <Gallery images={images} title={product.title} />
+        </div>
 
-        <div className="flex flex-col gap-3">
-          <h1 className="text-2xl leading-tight font-medium">{product.title}</h1>
-          {product.brand && (
-            <Link href={`/search?brand=${encodeURIComponent(product.brand)}`} className="inline-flex min-h-11 items-center md:min-h-0 self-start text-sm text-link hover:text-link-hover hover:underline">
-              Visit the {product.brand} store
-            </Link>
-          )}
-          {product.ratingCount > 0 && (
-            <a href="#reviews" className="self-start rounded hover:underline">
-              <Rating value={product.ratingAvg} count={product.ratingCount} />
-            </a>
-          )}
-          <hr className="border-border" />
-          {/* On phones the buy box sits further down; the price still belongs at the top. */}
-          <div className="lg:hidden">
-            <Price cents={product.priceCents} size="lg" />
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            {product.brand && (
+              <Link
+                href={`/search?brand=${encodeURIComponent(product.brand)}`}
+                className="inline-flex min-h-11 items-center self-start text-sm font-bold text-link hover:text-link-hover hover:underline md:min-h-0"
+              >
+                {product.brand}
+              </Link>
+            )}
+            <h1 className="text-3xl leading-tight font-medium">{product.title}</h1>
+            {product.ratingCount > 0 && (
+              <a href="#reviews" className="self-start rounded hover:underline">
+                <Rating value={product.ratingAvg} count={product.ratingCount} />
+              </a>
+            )}
           </div>
+
+          <aside aria-label="Buy" className="border-y border-border py-5">
+            <BuyBox productId={product.id} slug={product.slug} priceCents={product.priceCents} availability={product.availability} save={save} />
+          </aside>
+
           <section aria-labelledby="about">
             <h2 id="about" className="mb-1 font-bold">
               About this item
             </h2>
-            <p className="text-sm leading-relaxed">{product.description}</p>
+            <p className="leading-relaxed">{product.description}</p>
           </section>
+
+          {reviews && <CustomerSnapshot data={reviews} />}
+
           <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
             {product.brand && (
               <>
-                <dt className="font-bold">Brand</dt>
+                <dt className="text-muted">Brand</dt>
                 <dd>{product.brand}</dd>
               </>
             )}
-            <dt className="font-bold">Department</dt>
-            <dd>{product.category.name}</dd>
+            <dt className="text-muted">Department</dt>
+            <dd>
+              <Link href={`/search?category=${product.category.slug}`} className="text-link hover:text-link-hover hover:underline">
+                {product.category.name}
+              </Link>
+            </dd>
           </dl>
         </div>
-
-        <aside aria-label="Buy" className="md:col-span-2 lg:col-span-1">
-          <div className="lg:sticky lg:top-4">
-            <BuyBox productId={product.id} slug={product.slug} priceCents={product.priceCents} availability={product.availability} save={save} />
-          </div>
-        </aside>
       </div>
 
       {reviews && <Reviews slug={product.slug} data={reviews} eligibility={eligibility} />}

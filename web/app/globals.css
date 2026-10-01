@@ -45,3 +45,18 @@
     box-shadow: 0 0 0 4px var(--color-focus);
   }
 }
+
+/* The cart drawer slides in from the right; people who ask for less motion get it without the slide. */
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+.drawer[open] {
+  animation: drawer-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer[open] {
+    animation: none;
+  }
+}
