@@ -8,8 +8,6 @@ sponsored results, forced sign in, and pages full of ads.
 * **API health:** <https://amazon-rebuild-8x-production.up.railway.app/health>
 * **Agent logs:** every prompt and response is in [`.agent-logs/`](.agent-logs), see [CAPTURE-TEST.md](CAPTURE-TEST.md)
 
-> **Screenshot to add:** home page at desktop width (`docs/screenshots/home.png`)
-
 ## Try it in two minutes
 
 1. Search for **"phone"** and narrow the results with the filters on the left.
