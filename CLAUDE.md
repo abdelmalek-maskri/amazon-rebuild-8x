@@ -118,3 +118,10 @@ Money and trust rules:
   nothing), decrements stock with a `stock >= qty` guard and empties the cart, in one
   transaction. If stock ran out meanwhile the order becomes `needs_refund`.
 * Guests are identified by an httpOnly cart cookie; orders are reached by their UUID.
+* Cart (`api/src/modules/cart`): the `cart_id` cookie (httpOnly, SameSite=Lax, Secure in
+  production, 30 days) is set only on the first add, and any value that isn't a UUID of an
+  existing cart is treated as no cart. Every cart response is the whole cart, priced from
+  current product rows. Quantity changes lock the product row (`SELECT ... FOR UPDATE`) and
+  check stock and the 10 per line limit before writing, so races can't oversell and errors are
+  409s with a readable message, not constraint 500s. Lines are always looked up by item id
+  AND cart id, so another shopper's line is a 404.
