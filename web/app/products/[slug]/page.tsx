@@ -91,7 +91,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
 
         <aside aria-label="Buy" className="md:col-span-2 lg:col-span-1">
           <div className="lg:sticky lg:top-4">
-            <BuyBox priceCents={product.priceCents} availability={product.availability} />
+            <BuyBox productId={product.id} priceCents={product.priceCents} availability={product.availability} />
           </div>
         </aside>
       </div>
