@@ -42,6 +42,8 @@ cd api && npx vitest run test/app.test.ts -t "404"   # one file, one test
 cd api && npm run db:generate   # SQL migration from src/db/schema.ts into api/drizzle/
 cd api && npm run db:migrate    # applies api/drizzle/ with src/db/migrate.ts (not drizzle-kit migrate)
 cd api && npm run db:seed       # inserts missing categories/products from api/data/products.json
+cd e2e && npm run e2e           # Playwright against the live site (real Stripe test payments)
+E2E_BASE_URL=http://localhost:3000 npm run e2e   # same tests against your machine
 ```
 
 Deploys: Railway builds `api/` with `npm run build`, runs `npm run db:deploy` (migrate, then
