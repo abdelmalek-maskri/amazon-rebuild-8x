@@ -253,3 +253,54 @@ describe("order history", () => {
     expect((await bob.get(`/orders/${order.id}`)).status).toBe(200);
   });
 });
+
+describe("Buy Now", () => {
+  it("pays for one product directly and leaves the basket untouched", async () => {
+    const { agent, products: [inBasket] } = await basketWith({ priceCents: 300, stock: 5, quantity: 2 });
+    const gadget = await createProduct({ priceCents: 4500, stock: 3 });
+
+    const res = await agent.post("/checkout").send({ productId: gadget.id, quantity: 2 });
+    expect(res.status).toBe(201);
+    const [order] = await db.select().from(orders).where(eq(orders.id, res.body.orderId));
+    expect(order).toMatchObject({ status: "pending", totalCents: 9000, cartId: null });
+    const [params] = createSession.mock.calls[0]!;
+    expect(params.line_items).toHaveLength(1);
+    expect(params.cancel_url).toBe(`http://localhost:3000/products/${gadget.slug}`);
+
+    await sendEvent("checkout.session.completed", paidSession(order!)).expect(200);
+    expect(await statusOf(order!.id)).toBe("paid");
+    expect(await stockOf(gadget.id)).toBe(1);
+    const basket = (await agent.get("/cart")).body;
+    expect(basket.items.map((i: { product: { id: string }; quantity: number }) => [i.product.id, i.quantity])).toEqual([[inBasket!.id, 2]]);
+  });
+
+  it("refuses more than is in stock, out of stock and unknown products", async () => {
+    const low = await createProduct({ stock: 1 });
+    const gone = await createProduct({ stock: 0 });
+    const tooMany = await request(app).post("/checkout").send({ productId: low.id, quantity: 2 });
+    expect(tooMany.status).toBe(409);
+    expect(tooMany.body.message).toBe("Only 1 of this item is available.");
+    expect((await request(app).post("/checkout").send({ productId: gone.id })).body.message).toBe("Sorry, this item is out of stock.");
+    expect((await request(app).post("/checkout").send({ productId: crypto.randomUUID() })).status).toBe(404);
+    expect(await db.select().from(orders)).toHaveLength(0);
+  });
+
+  it.each([
+    [{ productId: "nope" }, "productId"],
+    [{ productId: crypto.randomUUID(), quantity: 11 }, "quantity"],
+    [{ productId: crypto.randomUUID(), quantity: 0 }, "quantity"],
+  ])("rejects %o with 400", async (body, field) => {
+    const res = await request(app).post("/checkout").send(body);
+    expect(res.status).toBe(400);
+    expect(res.body.fields.map((f: { path: string }) => f.path)).toContain(field);
+  });
+
+  it("links a signed in shopper's Buy Now order to their account", async () => {
+    const agent = request.agent(serve());
+    await agent.post("/auth/signup").send({ email: "ada@example.com", name: "Ada", password: "a long password" }).expect(201);
+    const product = await createProduct({ stock: 2 });
+    const res = await agent.post("/checkout").send({ productId: product.id }).expect(201);
+    const [order] = await db.select().from(orders).where(eq(orders.id, res.body.orderId));
+    expect(order!.userId).not.toBeNull();
+  });
+});

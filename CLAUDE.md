@@ -152,6 +152,9 @@ Money and trust rules:
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
   on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
+* Buy Now: `POST /checkout` with `{ productId, quantity }` creates an order for that product with
+  `cart_id` null, so the webhook leaves the basket alone; Stripe's cancel link returns to the
+  product page. Without a body it checks out the basket. Both share `startPayment()`.
 * Orders and accounts: checkout stores `orders.user_id` when signed in. `GET /orders` (401 for
   guests) lists only that account's non-pending orders, newest first. `GET /orders/:id` opens a
   guest order for anyone with the link, but an account's order only for that account (404
