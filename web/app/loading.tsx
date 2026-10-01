@@ -8,7 +8,7 @@ export default function Loading() {
       <div className="bg-nav-light px-4 pt-10 pb-16 sm:pt-14">
         <Skeleton className="mx-auto h-9 w-2/3 max-w-lg bg-surface/15" />
       </div>
-      <div className="mx-auto -mt-10 flex max-w-[1500px] flex-col gap-6 px-3 sm:px-4">
+      <div className="mx-auto -mt-10 flex max-w-375 flex-col gap-6 px-3 sm:px-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="flex flex-col gap-3 bg-surface p-5">

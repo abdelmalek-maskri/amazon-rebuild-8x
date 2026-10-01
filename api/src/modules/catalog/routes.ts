@@ -32,6 +32,8 @@ const ListQuery = z
 
 const Slug = z.string().regex(/^[a-z0-9-]{1,120}$/);
 
+const SuggestQuery = z.object({ q: z.string().trim().min(2).max(100) });
+
 export const catalogRoutes = Router();
 
 catalogRoutes.get("/categories", async (_req, res) => {
@@ -55,4 +57,12 @@ catalogRoutes.get("/products", async (req, res) => {
 
 catalogRoutes.get("/products/:slug", async (req, res) => {
   res.json(await service.getProduct(Slug.parse(req.params.slug)));
+});
+
+// Called on every pause in typing, so it stays small: 6 products, 3 departments, no facets.
+catalogRoutes.get("/suggestions", async (req, res) => {
+  const { q } = SuggestQuery.parse(req.query);
+  // Short private cache: the same prefix typed twice in a minute is answered by the browser.
+  res.set("Cache-Control", "private, max-age=60");
+  res.json(await service.getSuggestions(q));
 });

@@ -153,3 +153,37 @@ describe("GET /categories", () => {
     ]);
   });
 });
+
+describe("GET /suggestions", () => {
+  it("ranks titles starting with the query first, then word starts, then anything else", async () => {
+    await createProduct({ slug: "phone-stand", title: "Phone Stand", ratingAvg: 1 });
+    await createProduct({ slug: "smart-phone-case", title: "Smart Phone Case", ratingAvg: 1 });
+    await createProduct({ slug: "earphones", title: "Wired Earphones", ratingAvg: 5 });
+    await createProduct({ slug: "cable", title: "USB Cable", description: "Charges any phone", ratingAvg: 5 });
+    const res = await request(app).get("/suggestions?q=phone");
+    expect(res.status).toBe(200);
+    // Rating only breaks ties inside a rank: the 1 star "Phone Stand" still beats 5 star "Earphones".
+    expect(res.body.products.map((p: { slug: string }) => p.slug)).toEqual(["phone-stand", "smart-phone-case", "earphones", "iphone-13-pro", "cable"]);
+    expect(res.body.products[0]).toEqual({ slug: "phone-stand", title: "Phone Stand", brand: null, imageUrl: expect.any(String) });
+  });
+
+  it("matches brands and suggests departments by name", async () => {
+    const res = await request(app).get("/suggestions?q=kitch");
+    expect(res.body.categories).toEqual([{ slug: "home-kitchen", name: "Home & Kitchen" }]);
+    const apple = await request(app).get("/suggestions?q=apple");
+    expect(apple.body.products.map((p: { slug: string }) => p.slug)).toContain("iphone-13-pro");
+  });
+
+  it("caps the list at 6 products and lets the browser cache it briefly", async () => {
+    const res = await request(app).get("/suggestions?q=te");
+    expect(res.body.products.length).toBeLessThanOrEqual(6);
+    expect(res.headers["cache-control"]).toBe("private, max-age=60");
+  });
+
+  it("treats wildcards as text and rejects queries under 2 characters", async () => {
+    expect((await request(app).get("/suggestions?q=%25%25")).body.products).toEqual([]);
+    const short = await request(app).get("/suggestions?q=a");
+    expect(short.status).toBe(400);
+    expect(short.body.fields[0].path).toBe("q");
+  });
+});

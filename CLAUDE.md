@@ -79,6 +79,10 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   store) for checking at 375px and 1280px. `useToast()` needs the `ToastProvider` in the root
   layout. Product images must come from `cdn.dummyjson.com` (`images.remotePatterns`); use
   `preload`, not the deprecated `priority`, on above-the-fold images.
+  Search state lives only in the URL. `web/lib/search-params.ts` parses it (bad values are
+  dropped, never sent to the API) and builds every filter, sort and page link with
+  `searchHref(state, patch)`, which resets to page 1 unless the patch sets `page`. Filters are
+  plain links so they work without JavaScript; on phones they sit in a native `<details>`.
 * `api/`: Express 5, TypeScript, Zod, Drizzle, Postgres. A modular monolith with modules in
   `api/src/modules/` (`catalog`, `cart`, `orders`; Stripe lives in `orders`). Each module has
   `routes.ts` (HTTP and Zod validation only), `service.ts` (business rules, never sees req or
@@ -93,7 +97,9 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   catalog service maps it to `availability` (`in_stock`, `low_stock` with `left` when 5 or fewer,
   `out_of_stock`). List endpoints return `{ items, total, page, pageSize }`; `GET /products` also
   returns `facets`, where each facet's counts ignore that facet's own filter. Search escapes
-  `%`/`_` before `ILIKE`.
+  `%`/`_` before `ILIKE`. `GET /suggestions?q=` (2+ chars) feeds the header combobox: it matches the same fields as
+  search so a suggestion never promises what Enter won't find, ranks title prefix > title word
+  start > title contains > brand/description, and is browser cached for 60s.
 
 Request path: the browser only talks to the web domain. Next.js rewrites `/api/*` to the API,
 so cookies are first party and the API does not enable CORS. Server components call the API
