@@ -24,7 +24,7 @@ export default async function Home() {
         <h1 className="text-3xl font-bold text-surface sm:text-4xl">Everything you need. Nothing in the way.</h1>
       </section>
 
-      <div className="mx-auto -mt-10 flex max-w-[1500px] flex-col gap-6 px-3 sm:px-4">
+      <div className="mx-auto -mt-10 flex max-w-375 flex-col gap-6 px-3 sm:px-4">
         <section aria-labelledby="departments" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <h2 id="departments" className="sr-only">
             Shop by department
