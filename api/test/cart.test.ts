@@ -1,15 +1,17 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
 import { db, pool } from "../src/db/index.js";
 import { products } from "../src/db/schema.js";
-import { createProduct, resetDb } from "./helpers.js";
+import { closeServers, createProduct, resetDb, serve } from "./helpers.js";
 
-const app = createApp();
+const app = serve();
 
 beforeEach(resetDb);
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 // An agent keeps cookies between requests, like one shopper's browser.
 const shopper = () => request.agent(app);

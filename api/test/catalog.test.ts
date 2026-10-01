@@ -1,10 +1,9 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
 import { pool } from "../src/db/index.js";
-import { createCategory, createProduct, resetDb } from "./helpers.js";
+import { closeServers, createCategory, createProduct, resetDb, serve } from "./helpers.js";
 
-const app = createApp();
+const app = serve();
 
 type Summary = { slug: string; priceCents: number; availability: { status: string; left?: number } };
 const slugs = (body: { items: Summary[] }) => body.items.map((p) => p.slug);
@@ -22,7 +21,10 @@ beforeAll(async () => {
   await p("chef-knife", { title: "Chef Knife", brand: null, categoryId: kitchen.id, priceCents: 2999, ratingAvg: 4.0, ratingCount: 3, stock: 20, description: "100% steel" });
   await p("frying-pan", { title: "Frying Pan", brand: null, categoryId: kitchen.id, priceCents: 1999, ratingAvg: 3.0, ratingCount: 3, stock: 20 });
 });
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 describe("GET /products", () => {
   it("lists everything in featured order with paging info", async () => {

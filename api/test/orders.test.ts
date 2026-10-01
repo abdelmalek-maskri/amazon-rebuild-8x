@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../src/app.js";
 import { db, pool } from "../src/db/index.js";
 import { cartItems, orders, products } from "../src/db/schema.js";
 import { stripe } from "../src/lib/stripe.js";
-import { createProduct, resetDb } from "./helpers.js";
+import { closeServers, createProduct, resetDb, serve } from "./helpers.js";
 
-const app = createApp();
+const app = serve();
 const WEBHOOK_SECRET = "whsec_test_fake";
 
 // Stripe's network call is replaced; everything on our side, including signature checks, is real.
@@ -22,7 +21,10 @@ beforeEach(async () => {
     return { id: `cs_test_${sessionCount}`, url: `https://checkout.stripe.test/${sessionCount}` };
   }) as never);
 });
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 async function basketWith(...lines: { priceCents: number; stock: number; quantity: number }[]) {
   const agent = request.agent(app);

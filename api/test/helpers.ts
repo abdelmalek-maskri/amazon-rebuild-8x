@@ -1,4 +1,6 @@
+import type { Server } from "node:http";
 import { sql } from "drizzle-orm";
+import { createApp } from "../src/app.js";
 import { db } from "../src/db/index.js";
 import { categories, products } from "../src/db/schema.js";
 
@@ -43,4 +45,20 @@ export async function pgErrorCode(promise: Promise<unknown>) {
     return e.cause?.code ?? e.code;
   }
   throw new Error("expected the query to fail, but it succeeded");
+}
+
+const servers: Server[] = [];
+
+// Supertest's own listen(0) binds every address (::) but then dials 127.0.0.1. On macOS another
+// program can already hold that port on 127.0.0.1 (VS Code's helpers do), and the request lands
+// there instead: random 404s, empty bodies and hangs. Binding to 127.0.0.1 ourselves means the OS
+// only hands out ports that are actually free there.
+export function serve(app = createApp()) {
+  const server = app.listen(0, "127.0.0.1");
+  servers.push(server);
+  return server;
+}
+
+export async function closeServers() {
+  await Promise.all(servers.splice(0).map((s) => new Promise((resolve) => s.close(resolve))));
 }
