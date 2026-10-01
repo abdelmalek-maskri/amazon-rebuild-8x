@@ -19,7 +19,7 @@ export default async function Home() {
   );
 
   return (
-    <div className="bg-page pb-4">
+    <div className="flex-1 bg-page pb-12">
       <section className="bg-linear-to-b from-nav-light to-page px-4 pt-10 pb-16 text-center sm:pt-14">
         <h1 className="text-3xl font-bold text-surface sm:text-4xl">Everything you need. Nothing in the way.</h1>
       </section>

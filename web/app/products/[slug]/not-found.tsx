@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/ui/state";
 
 export default function ProductNotFound() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16">
+    <div className="mx-auto w-full max-w-2xl px-4 py-16">
       <EmptyState
         title="We couldn't find that product"
         message="It may have been removed, or the link may be wrong. Try searching for it instead."

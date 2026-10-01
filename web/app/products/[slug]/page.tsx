@@ -40,7 +40,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
   const images = product.images.length ? product.images : [product.imageUrl];
 
   return (
-    <div className="mx-auto max-w-375 px-3 py-4 sm:px-4">
+    <div className="mx-auto w-full max-w-375 px-3 pt-4 pb-12 sm:px-4">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-1">
           <li>
