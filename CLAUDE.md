@@ -140,6 +140,12 @@ Money and trust rules:
   `checkout-<orderId>`, 30 minute expiry). If Stripe fails the order is deleted and the shopper
   gets a 502. Stock is only taken by the webhook. `/webhooks/stripe` is mounted before
   `express.json()` because the signature covers the raw body. `env.ts` refuses `sk_live_` keys.
+* Shopper IP behind Vercel: requests through the site reach the API from Vercel's servers, so
+  `req.ip` is Vercel. `web/proxy.ts` forwards the shopper's address as `x-store-client-ip` plus
+  `x-store-proxy-secret` (env `PROXY_SECRET`, same value on Vercel and Railway), and strips any
+  copies sent by the browser. `api/src/lib/client-ip.ts` trusts that address only when the secret
+  matches (constant time); rate limits key on it via `ipKeyGenerator`. Without the secret they
+  fall back to `req.ip`, which on production means one shared limit for the whole site.
 * Auth (`api/src/modules/auth`): optional accounts; guest checkout stays. `loadUser` runs on every
   request and sets `res.locals.user`; routes never read the session cookie themselves. Passwords
   are argon2id (OWASP baseline), sessions are a random 32 byte token in an httpOnly `session`

@@ -1,5 +1,6 @@
-import { Router, type RequestHandler } from "express";
-import { rateLimit } from "express-rate-limit";
+import { Router, type Request, type RequestHandler } from "express";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
+import { clientIp } from "../../lib/client-ip.js";
 import { z } from "zod";
 import { clearCartId, readCartId } from "../cart/cookie.js";
 import { clearSessionToken, readSessionToken, writeSessionToken } from "./cookie.js";
@@ -35,8 +36,11 @@ const tooMany = { error: "TOO_MANY_ATTEMPTS", message: "Too many attempts. Pleas
 // Built per app, so every test app starts with a clean count. In memory is enough for one Railway instance.
 export function authRoutes() {
   const router = Router();
-  const signInLimit = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, message: tooMany });
-  const signUpLimit = rateLimit({ windowMs: 60 * 60_000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false, message: tooMany });
+  // Keyed on the shopper's real address (see lib/client-ip.ts). ipKeyGenerator groups an IPv6
+  // address by its /56, so one machine can't rotate through its own addresses.
+  const limits = { standardHeaders: "draft-8" as const, legacyHeaders: false, message: tooMany, keyGenerator: (req: Request) => ipKeyGenerator(clientIp(req)) };
+  const signInLimit = rateLimit({ windowMs: 15 * 60_000, limit: 10, ...limits });
+  const signUpLimit = rateLimit({ windowMs: 60 * 60_000, limit: 5, ...limits });
 
   router.post("/auth/signup", signUpLimit, async (req, res) => {
     const { email, name, password } = SignUpBody.parse(req.body);
