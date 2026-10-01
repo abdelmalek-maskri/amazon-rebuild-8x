@@ -27,6 +27,11 @@ orderRoutes.get("/orders/:id", async (req, res) => {
   res.json(await service.getOrder(id, res.locals.user?.id));
 });
 
+orderRoutes.post("/orders/:id/cancel", async (req, res) => {
+  const { id } = OrderParams.parse(req.params);
+  res.json(await service.cancelOrder(id, res.locals.user?.id));
+});
+
 const ListQuery = z.object({
   page: z.coerce.number().int().min(1).max(500).default(1),
   pageSize: z.coerce.number().int().min(1).max(20).default(10),

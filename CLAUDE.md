@@ -152,6 +152,14 @@ Money and trust rules:
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
   on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
+* Cancel and refund: `POST /orders/:id/cancel` (same access rule as viewing). Allowed only while
+  paid and before simulated shipping (`SHIPS_AFTER_MS`, 30 min after payment). One transaction
+  marks it `cancelled` and restocks; then `refundIfOwed()` calls Stripe with idempotency key
+  `refund-<orderId>` and marks it `refunded`. If Stripe fails it stays `cancelled` and calling
+  cancel again only retries the refund. `needs_refund` orders are refunded automatically after
+  the payment webhook, and `charge.refunded` syncs refunds made in Stripe's dashboard. Shipping
+  and delivery are simulated from `paid_at`, never stored; the timeline marks them "Expected".
+  The Stripe webhook endpoint must include `charge.refunded`.
 * Buy Now: `POST /checkout` with `{ productId, quantity }` creates an order for that product with
   `cart_id` null, so the webhook leaves the basket alone; Stripe's cancel link returns to the
   product page. Without a body it checks out the basket. Both share `startPayment()`.

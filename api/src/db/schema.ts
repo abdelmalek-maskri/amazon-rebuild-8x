@@ -105,7 +105,9 @@ export const cartItems = pgTable(
   ],
 );
 
-export const orderStatus = pgEnum("order_status", ["pending", "paid", "needs_refund"]);
+// pending -> paid -> cancelled -> refunded, or needs_refund -> refunded. Shipping is simulated
+// from paid_at (see orders/service.ts), so it isn't a stored state.
+export const orderStatus = pgEnum("order_status", ["pending", "paid", "needs_refund", "cancelled", "refunded"]);
 
 export const orders = pgTable(
   "orders",
@@ -120,7 +122,12 @@ export const orders = pgTable(
     email: text(),
     totalCents: integer().notNull(),
     stripeSessionId: text().unique("orders_stripe_session_id_unique"),
+    // What a refund is issued against; set when the payment succeeds.
+    stripePaymentIntentId: text(),
+    stripeRefundId: text(),
     paidAt: timestamp({ withTimezone: true }),
+    cancelledAt: timestamp({ withTimezone: true }),
+    refundedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

@@ -83,9 +83,7 @@ function OrderCard({ order }: { order: OrderSummary }) {
         </div>
       </div>
       <div className="flex flex-col gap-3 p-4">
-        <p className={cn("font-bold", order.status === "paid" ? "text-success" : "text-warning")}>
-          {order.status === "paid" ? "Paid" : "Couldn't be completed, flagged for a refund"}
-        </p>
+        <p className={cn("font-bold", order.status === "paid" ? "text-success" : "text-warning")}>{statusLabel(order)}</p>
         <ul className="flex flex-col gap-3">
           {order.lines.map((l) => (
             <li key={l.product.slug} className="flex items-center gap-3">
@@ -104,4 +102,11 @@ function OrderCard({ order }: { order: OrderSummary }) {
       </div>
     </li>
   );
+}
+
+function statusLabel(order: OrderSummary) {
+  if (order.status === "paid") return order.fulfilment === "delivered" ? "Delivered" : order.fulfilment === "shipped" ? "Shipped" : "Preparing to ship";
+  if (order.status === "cancelled") return "Cancelled, refund pending";
+  if (order.status === "refunded") return "Refunded";
+  return "Couldn't be completed, being refunded";
 }
