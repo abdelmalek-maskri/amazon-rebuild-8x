@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { ApiError, checkout, type Cart } from "@/lib/api";
+import { ApiError, checkout, updateCartItem, type Cart, type CartLine } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 
@@ -50,10 +51,30 @@ export function CartDrawerProvider({ children }: { children: ReactNode }) {
 
 // A native modal <dialog>: the browser traps focus inside, makes the page behind inert, closes on
 // Escape and hands focus back to the button that opened it. No focus trap code of our own to get wrong.
-function CartDrawer({ cart, addedProductId, onClosed }: { cart: Cart; addedProductId: string; onClosed: () => void }) {
+function CartDrawer({ cart: opened, addedProductId, onClosed }: { cart: Cart; addedProductId: string; onClosed: () => void }) {
+  const router = useRouter();
   const ref = useRef<HTMLDialogElement>(null);
+  const [cart, setCart] = useState(opened);
+  const [busyLine, setBusyLine] = useState<string | null>(null);
+  const [, startRefresh] = useTransition();
   const [error, setError] = useState("");
   const [redirecting, setRedirecting] = useState(false);
+
+  // Every cart response is the whole basket, so the drawer shows exactly what the server holds.
+  async function setQuantity(line: CartLine, quantity: number) {
+    setBusyLine(line.id);
+    setError("");
+    try {
+      setCart(await updateCartItem(line.id, quantity));
+      // The header count re-renders from the server, as after any cart change.
+      startRefresh(() => router.refresh());
+    } catch (err) {
+      if (!(err instanceof ApiError)) throw err;
+      setError(err.message);
+    } finally {
+      setBusyLine(null);
+    }
+  }
 
   useEffect(() => {
     const dialog = ref.current;
@@ -81,6 +102,7 @@ function CartDrawer({ cart, addedProductId, onClosed }: { cart: Cart; addedProdu
   }
 
   const added = cart.items.find((i) => i.product.id === addedProductId);
+  const step = "grid size-9 place-items-center text-base font-bold disabled:cursor-not-allowed disabled:text-muted/50";
   return (
     <dialog
       ref={ref}
@@ -120,7 +142,38 @@ function CartDrawer({ cart, addedProductId, onClosed }: { cart: Cart; addedProdu
                 <Link href={`/products/${line.product.slug}`} onClick={() => ref.current?.close()} className="line-clamp-2 text-sm hover:text-link-hover">
                   {line.product.title}
                 </Link>
-                <p className="text-xs text-muted">Qty {line.quantity}</p>
+                {line.product.availability.status === "out_of_stock" ? (
+                  <p className="text-xs text-danger">No longer available</p>
+                ) : (
+                  <div
+                    role="group"
+                    aria-label={`Quantity of ${line.product.title}`}
+                    aria-busy={busyLine === line.id || undefined}
+                    className="mt-1 inline-flex items-center rounded-full border-2 border-cta-border"
+                  >
+                    <button
+                      type="button"
+                      className={cn(step, "rounded-l-full")}
+                      disabled={busyLine !== null || line.quantity <= 1}
+                      onClick={() => setQuantity(line, line.quantity - 1)}
+                      aria-label="Decrease quantity"
+                    >
+                      −
+                    </button>
+                    <span className="min-w-7 text-center text-sm font-bold" aria-live="polite">
+                      {line.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      className={cn(step, "rounded-r-full")}
+                      disabled={busyLine !== null || line.quantity >= line.maxQuantity}
+                      onClick={() => setQuantity(line, line.quantity + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </div>
               <p className="shrink-0 text-sm font-bold">{formatPrice(line.lineTotalCents)}</p>
             </li>
