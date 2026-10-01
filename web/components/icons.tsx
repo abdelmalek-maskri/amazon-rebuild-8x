@@ -20,6 +20,14 @@ export function BasketIcon({ className = "size-8" }: IconProps) {
   );
 }
 
+export function HeartIcon({ className = "size-8" }: IconProps) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M16 27S4 19.6 4 11.8A6.3 6.3 0 0 1 16 9a6.3 6.3 0 0 1 12 2.8C28 19.6 16 27 16 27Z" />
+    </svg>
+  );
+}
+
 export function Smile({ className = "h-2.5 w-14" }: IconProps) {
   return (
     <svg viewBox="0 0 56 10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className={className} aria-hidden>

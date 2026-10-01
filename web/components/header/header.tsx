@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BasketIcon, Smile } from "@/components/icons";
+import { BasketIcon, HeartIcon, Smile } from "@/components/icons";
 import { ApiError, getCategories, type Category } from "@/lib/api";
 import { getHeaderState } from "@/lib/server-session";
 import { AccountMenu } from "./account-menu";
@@ -49,6 +49,19 @@ export async function Header() {
               <AccountMenu user={user} />
             </Suspense>
           </div>
+
+          {/* Guests land on sign in and come back to the list, which the page handles itself. */}
+          <Link
+            href="/wishlist"
+            aria-label="Wish List"
+            className="flex shrink-0 items-end gap-1 rounded px-2 py-1 hover:ring-1 hover:ring-surface"
+          >
+            <HeartIcon className="size-7" />
+            {/* Icon only on phones, where the top row already holds the logo, account and basket. */}
+            <span aria-hidden className="hidden pb-0.5 text-sm font-bold sm:inline">
+              Wish List
+            </span>
+          </Link>
 
           <Link
             href="/cart"
