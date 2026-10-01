@@ -194,3 +194,23 @@ export type ReviewPage = {
 export function getProductReviews(slug: string, stars?: number) {
   return apiFetch<ReviewPage>(`/products/${encodeURIComponent(slug)}/reviews${stars ? `?stars=${stars}` : ""}`);
 }
+
+export function checkout() {
+  return apiFetch<{ orderId: string; url: string }>("/checkout", { method: "POST" });
+}
+
+export type OrderStatus = "pending" | "paid" | "needs_refund";
+
+export type Order = {
+  id: string;
+  status: OrderStatus;
+  email: string | null;
+  totalCents: number;
+  createdAt: string;
+  paidAt: string | null;
+  items: { title: string; unitPriceCents: number; quantity: number; lineTotalCents: number; product: { slug: string; imageUrl: string } }[];
+};
+
+export function getOrder(id: string) {
+  return apiFetch<Order>(`/orders/${encodeURIComponent(id)}`);
+}

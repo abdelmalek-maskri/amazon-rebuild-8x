@@ -9,6 +9,10 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
       DATABASE_URL: TEST_DATABASE_URL,
+      // Fake values: tests never reach Stripe. The webhook secret signs test events locally.
+      STRIPE_SECRET_KEY: "sk_test_fake",
+      STRIPE_WEBHOOK_SECRET: "whsec_test_fake",
+      WEB_URL: "http://localhost:3000",
     },
   },
 });
