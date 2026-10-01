@@ -79,6 +79,9 @@ function SignedInMenu({ user }: { user: User }) {
         <Link href="/orders" onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded px-2 hover:bg-page">
           Your Orders
         </Link>
+        <Link href="/wishlist" onClick={() => setOpen(false)} className="flex min-h-11 items-center rounded px-2 hover:bg-page">
+          Your Wish List
+        </Link>
         <button
           type="button"
           onClick={doSignOut}

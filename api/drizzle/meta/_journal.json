@@ -43,6 +43,13 @@
       "when": 1790861838206,
       "tag": "0005_buyer_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790862289504,
+      "tag": "0006_wishlist",
+      "breakpoints": true
     }
   ]
 }

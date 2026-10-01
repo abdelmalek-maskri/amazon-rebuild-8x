@@ -9,7 +9,7 @@ import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { Reviews } from "@/components/product/reviews";
 import { ApiError, getProduct, getProductReviews, searchProducts, type ReviewEligibility, type ReviewPage } from "@/lib/api";
-import { getServerReviewEligibility } from "@/lib/server-session";
+import { getServerReviewEligibility, getServerSaveState } from "@/lib/server-session";
 
 // One request per render, shared by generateMetadata and the page.
 const loadProduct = cache(async (slug: string) => {
@@ -60,10 +60,15 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
   // ?stars=5 filters the reviews; anything else is ignored rather than sent to the API.
   const rawStars = (await searchParams).stars;
   const stars = typeof rawStars === "string" && /^[1-5]$/.test(rawStars) ? Number(rawStars) : undefined;
-  const [related, reviews, eligibility] = await Promise.all([
+  const [related, reviews, eligibility, save] = await Promise.all([
     searchProducts({ category: product.category.slug, sort: "featured", pageSize: 7 }),
     loadReviews(product.slug, stars),
     loadEligibility(product.slug),
+    // A failed lookup just shows "Add to List" unsaved; never worth failing the page.
+    getServerSaveState(product.id).catch((err) => {
+      if (err instanceof ApiError) return { signedIn: false, saved: false };
+      throw err;
+    }),
   ]);
   const more = related.items.filter((p) => p.id !== product.id).slice(0, 6);
   const images = product.images.length ? product.images : [product.imageUrl];
@@ -124,7 +129,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
 
         <aside aria-label="Buy" className="md:col-span-2 lg:col-span-1">
           <div className="lg:sticky lg:top-4">
-            <BuyBox productId={product.id} priceCents={product.priceCents} availability={product.availability} />
+            <BuyBox productId={product.id} slug={product.slug} priceCents={product.priceCents} availability={product.availability} save={save} />
           </div>
         </aside>
       </div>
