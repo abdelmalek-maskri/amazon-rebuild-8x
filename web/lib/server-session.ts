@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ApiError, getCart, getMe, getOrder, getReviewEligibility, listOrders, type Cart, type User } from "@/lib/api";
+import { ApiError, getCart, getMe, getOrder, getReviewEligibility, getWishlist, getWishlistStatus, listOrders, type Cart, type User } from "@/lib/api";
 
 const EMPTY: Cart = { items: [], itemCount: 0, subtotalCents: 0 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -50,4 +50,18 @@ export async function getServerOrders(page = 1) {
 
 export async function getServerReviewEligibility(slug: string) {
   return getReviewEligibility(slug, await forwardedCookie());
+}
+
+// Null when signed out, so the page can send the shopper to sign in.
+export async function getServerWishlist() {
+  const cookie = await forwardedCookie();
+  if (!cookie || !(await getServerUser())) return null;
+  return getWishlist(cookie);
+}
+
+// For the buy box: whether to show "Add to List" as a sign in link, a button, or "Saved".
+export async function getServerSaveState(productId: string): Promise<{ signedIn: boolean; saved: boolean }> {
+  const cookie = await forwardedCookie();
+  if (!cookie || !(await getServerUser())) return { signedIn: false, saved: false };
+  return { signedIn: true, saved: (await getWishlistStatus(productId, cookie)).saved };
 }

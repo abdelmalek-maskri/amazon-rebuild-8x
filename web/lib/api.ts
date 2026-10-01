@@ -271,3 +271,29 @@ export function signUp(name: string, email: string, password: string) {
 export function signOut() {
   return apiFetch<{ user: null }>("/auth/signout", { method: "POST" });
 }
+
+export type WishlistItem = {
+  addedAt: string;
+  product: Pick<ProductSummary, "id" | "slug" | "title" | "brand" | "imageUrl" | "priceCents" | "ratingAvg" | "ratingCount" | "availability">;
+};
+export type Wishlist = { items: WishlistItem[]; total: number };
+
+export function getWishlist(cookie: string) {
+  return apiFetch<Wishlist>("/wishlist", { headers: { Cookie: cookie } });
+}
+
+export function getWishlistStatus(productId: string, cookie?: string) {
+  return apiFetch<{ saved: boolean }>(`/wishlist/status/${encodeURIComponent(productId)}`, cookie ? { headers: { Cookie: cookie } } : {});
+}
+
+export function addToWishlist(productId: string) {
+  return apiFetch<Wishlist>("/wishlist/items", { method: "POST", body: JSON.stringify({ productId }) });
+}
+
+export function removeFromWishlist(productId: string) {
+  return apiFetch<Wishlist>(`/wishlist/items/${encodeURIComponent(productId)}`, { method: "DELETE" });
+}
+
+export function moveWishlistItemToBasket(productId: string) {
+  return apiFetch<Wishlist>(`/wishlist/items/${encodeURIComponent(productId)}/move-to-basket`, { method: "POST" });
+}

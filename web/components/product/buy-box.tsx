@@ -2,6 +2,7 @@ import { Price } from "@/components/ui/price";
 import type { Availability } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { AddToBasket } from "./add-to-basket";
+import { SaveToList } from "./save-to-list";
 
 const MAX_PER_ORDER = 10;
 
@@ -16,7 +17,9 @@ function StockLine({ availability }: { availability: Availability }) {
 }
 
 // The server decides what can be bought; this box only offers what is actually available.
-export function BuyBox({ productId, priceCents, availability }: { productId: string; priceCents: number; availability: Availability }) {
+type BuyBoxProps = { productId: string; slug: string; priceCents: number; availability: Availability; save: { signedIn: boolean; saved: boolean } };
+
+export function BuyBox({ productId, slug, priceCents, availability, save }: BuyBoxProps) {
   const max = availability.status === "low_stock" ? Math.min(availability.left, MAX_PER_ORDER) : MAX_PER_ORDER;
 
   return (
@@ -28,6 +31,8 @@ export function BuyBox({ productId, priceCents, availability }: { productId: str
       ) : (
         <AddToBasket productId={productId} max={max} />
       )}
+      {/* Saving works for sold out items too: that's when a list is most useful. */}
+      <SaveToList productId={productId} slug={slug} signedIn={save.signedIn} initiallySaved={save.saved} />
     </div>
   );
 }
