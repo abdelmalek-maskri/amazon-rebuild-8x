@@ -36,9 +36,6 @@ No real money moves. Stripe runs in test mode, and the API refuses to start with
 
 ## Better than Amazon, on purpose
 
-I went through amazon.co.uk as a guest on 30 September 2026 and noted what slowed me down.
-Each row below is a choice made in this store because of what I saw.
-
 | What Amazon does today | What this store does |
 | --- | --- |
 | 6 of the first 22 results were sponsored, including the first 3 | No sponsored results |
