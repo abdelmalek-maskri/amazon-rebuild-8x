@@ -129,6 +129,16 @@ Money and trust rules:
   `checkout-<orderId>`, 30 minute expiry). If Stripe fails the order is deleted and the shopper
   gets a 502. Stock is only taken by the webhook. `/webhooks/stripe` is mounted before
   `express.json()` because the signature covers the raw body. `env.ts` refuses `sk_live_` keys.
+* Auth (`api/src/modules/auth`): optional accounts; guest checkout stays. `loadUser` runs on every
+  request and sets `res.locals.user`; routes never read the session cookie themselves. Passwords
+  are argon2id (OWASP baseline), sessions are a random 32 byte token in an httpOnly `session`
+  cookie with only its SHA-256 stored, 30 days, rotated on every sign in. Unknown emails are
+  verified against a decoy hash so timing matches a wrong password. Sign in (10 per 15 min) and
+  sign up (5 per hour) are rate limited per IP, in memory, built per app in `authRoutes()`.
+* Baskets with accounts: always resolve the basket with `cart/service.resolveCartId(userId,
+  cookie)`. Signed in means the account's basket (`carts.user_id`, unique); a guest cookie only
+  opens baskets no account owns. Sign in/up merges the guest basket (capped by stock and 10),
+  sign out keeps the account's basket and clears the guest cookie.
 * Local Stripe: `stripe listen --forward-to localhost:4000/webhooks/stripe` and put its
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy

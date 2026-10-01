@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import { z } from "zod";
 import { readCartId } from "../cart/cookie.js";
+import { resolveCartId } from "../cart/service.js";
 import * as service from "./service.js";
 
 const OrderParams = z.object({ id: z.uuid() });
@@ -8,7 +9,7 @@ const OrderParams = z.object({ id: z.uuid() });
 export const orderRoutes = Router();
 
 orderRoutes.post("/checkout", async (req, res) => {
-  res.status(201).json(await service.checkout(readCartId(req)));
+  res.status(201).json(await service.checkout(await resolveCartId(res.locals.user?.id, readCartId(req))));
 });
 
 // The order id is a random UUID, so the link itself is the access check, like a receipt link.

@@ -29,3 +29,8 @@ export function writeCartId(res: Response, cartId: string) {
     maxAge: MAX_AGE_MS,
   });
 }
+
+// After sign in or out the account's basket is found through the session, so the guest pointer goes.
+export function clearCartId(res: Response) {
+  res.clearCookie(NAME, { httpOnly: true, sameSite: "lax", secure: env.NODE_ENV === "production", path: "/" });
+}

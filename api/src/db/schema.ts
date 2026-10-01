@@ -50,8 +50,37 @@ export const products = pgTable(
   ],
 );
 
+export const users = pgTable("users", {
+  id: id(),
+  // Stored lower cased and trimmed, so "Ada@X.com" and "ada@x.com" are one account.
+  email: text().notNull().unique(),
+  name: text().notNull(),
+  // argon2id; the password itself is never stored or logged.
+  passwordHash: text().notNull(),
+  ...timestamps,
+});
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: id(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // SHA-256 of the cookie token: a leaked database row can't be replayed as a session.
+    tokenHash: text().notNull().unique("sessions_token_hash_unique"),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    ...timestamps,
+  },
+  (t) => [index("sessions_user_id_idx").on(t.userId)],
+);
+
 export const carts = pgTable("carts", {
   id: id(),
+  // Null for guests. Unique: a signed in shopper has exactly one basket, on every device.
+  userId: uuid()
+    .unique("carts_user_id_unique")
+    .references(() => users.id, { onDelete: "cascade" }),
   ...timestamps,
 });
 

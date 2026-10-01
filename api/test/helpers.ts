@@ -3,7 +3,7 @@ import { db } from "../src/db/index.js";
 import { categories, products } from "../src/db/schema.js";
 
 export async function resetDb() {
-  await db.execute(sql`truncate categories, products, reviews, carts, cart_items, orders, order_items restart identity cascade`);
+  await db.execute(sql`truncate categories, products, reviews, users, sessions, carts, cart_items, orders, order_items restart identity cascade`);
 }
 
 export async function createCategory(overrides: Partial<typeof categories.$inferInsert> = {}) {
