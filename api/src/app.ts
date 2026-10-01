@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db/index.js";
 import { errorHandler, notFound } from "./lib/errors.js";
 import { httpLogger } from "./lib/logger.js";
+import { catalogRoutes } from "./modules/catalog/routes.js";
 
 export function createApp() {
   const app = express();
@@ -24,6 +25,8 @@ export function createApp() {
       res.status(503).json({ status: "error", db: "down" });
     }
   });
+
+  app.use(catalogRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

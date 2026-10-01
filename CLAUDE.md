@@ -84,6 +84,12 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   `logger.ts` (pino, request id), `errors.ts`. Throw `AppError(status, CODE, message)` or let
   Zod throw; the one error handler turns everything into `{ error, message }` and never leaks
   internals. ESM with `nodenext`, so relative imports end in `.js`.
+  Routes parse `req.query`/`req.params` with a Zod schema (`.parse`, so failures become 400 with
+  `fields`). Prices in query strings are integer cents. Products never expose raw `stock`: the
+  catalog service maps it to `availability` (`in_stock`, `low_stock` with `left` when 5 or fewer,
+  `out_of_stock`). List endpoints return `{ items, total, page, pageSize }`; `GET /products` also
+  returns `facets`, where each facet's counts ignore that facet's own filter. Search escapes
+  `%`/`_` before `ILIKE`.
 
 Request path: the browser only talks to the web domain. Next.js rewrites `/api/*` to the API,
 so cookies are first party and the API does not enable CORS. Server components call the API
