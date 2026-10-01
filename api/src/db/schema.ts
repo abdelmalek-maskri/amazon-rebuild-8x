@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgEnum, pgTable, real, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, pgEnum, pgTable, real, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 // Column names come from the camelCase keys via `casing: "snake_case"` (db/index.ts, drizzle.config.ts).
 const id = () => uuid().primaryKey().defaultRandom();
@@ -174,12 +174,18 @@ export const reviews = pgTable(
     rating: integer().notNull(),
     body: text().notNull(),
     authorName: text().notNull(),
+    // Null for seeded reviews. Set null if the account goes: the review stays, the link to it doesn't.
+    userId: uuid().references(() => users.id, { onDelete: "set null" }),
+    // True only when written by someone with a paid order for this product (checked when written).
+    verified: boolean().notNull().default(false),
     // When the review was written, which is what shoppers see; created_at is when the row was stored.
     reviewedAt: timestamp({ withTimezone: true }).notNull(),
     ...timestamps,
   },
   (t) => [
     check("reviews_rating_range", sql`${t.rating} between 1 and 5`),
+    // One review per shopper per product. Seeded reviews have no user, and nulls never clash.
+    unique("reviews_product_id_user_id_unique").on(t.productId, t.userId),
     // Serves the product's list, newest first, and the per-star breakdown.
     index("reviews_product_id_reviewed_at_idx").on(t.productId, t.reviewedAt),
   ],

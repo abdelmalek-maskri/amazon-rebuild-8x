@@ -10,7 +10,24 @@ const Query = z.object({
   pageSize: z.coerce.number().int().min(1).max(20).default(10),
 });
 
+// Trimmed first, so a body of only spaces is rejected rather than stored.
+const NewReview = z.object({
+  rating: z.number().int().min(1).max(5),
+  body: z.string().trim().min(10, { error: "Write at least 10 characters." }).max(2000),
+});
+
 export const reviewRoutes = Router();
+
+reviewRoutes.get("/products/:slug/reviews/eligibility", async (req, res) => {
+  const { slug } = Params.parse(req.params);
+  res.json(await service.getEligibility(slug, res.locals.user));
+});
+
+reviewRoutes.post("/products/:slug/reviews", async (req, res) => {
+  const { slug } = Params.parse(req.params);
+  const { rating, body } = NewReview.parse(req.body);
+  res.status(201).json(await service.createReview(slug, res.locals.user, rating, body));
+});
 
 reviewRoutes.get("/products/:slug/reviews", async (req, res) => {
   const { slug } = Params.parse(req.params);

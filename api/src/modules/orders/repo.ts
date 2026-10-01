@@ -195,3 +195,14 @@ export async function itemsForOrders(orderIds: string[]) {
     .where(inArray(orderItems.orderId, orderIds))
     .orderBy(asc(orderItems.createdAt), asc(orderItems.id));
 }
+
+// Only a paid order counts: cancelled, refunded or unpaid orders never earn a "Verified Purchase".
+export async function hasPaidFor(userId: string, productId: string) {
+  const [row] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .where(and(eq(orders.userId, userId), eq(orders.status, "paid"), eq(orderItems.productId, productId)))
+    .limit(1);
+  return Boolean(row);
+}
