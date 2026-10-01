@@ -11,9 +11,9 @@ export function Gallery({ images, title }: { images: string[]; title: string }) 
   if (!main) return null;
 
   return (
-    <div className="flex flex-col-reverse gap-3 md:flex-row">
+    <div className="flex flex-col-reverse gap-3 sm:flex-row">
       {images.length > 1 && (
-        <ul className="flex gap-2 md:flex-col" aria-label="Product images">
+        <ul className="flex gap-2 sm:flex-col" aria-label="Product images">
           {images.map((src, i) => (
             <li key={src}>
               <button
@@ -39,7 +39,7 @@ export function Gallery({ images, title }: { images: string[]; title: string }) 
           alt={images.length > 1 ? `${title}, image ${current + 1} of ${images.length}` : title}
           fill
           preload
-          sizes="(min-width: 1024px) 40vw, (min-width: 768px) 50vw, 100vw"
+          sizes="(min-width: 1024px) 40vw, (min-width: 640px) 45vw, 448px"
           className="object-contain p-6 mix-blend-multiply"
         />
       </div>

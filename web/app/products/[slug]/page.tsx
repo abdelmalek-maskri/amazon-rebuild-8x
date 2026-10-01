@@ -90,8 +90,8 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
       </nav>
 
       {/* Two columns: the photos stay in view while the right side reads top to bottom. */}
-      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <div className="md:sticky md:top-4 md:self-start">
+      <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div className="mx-auto w-full max-w-md sm:sticky sm:top-4 sm:max-w-none sm:self-start">
           <Gallery images={images} title={product.title} />
         </div>
 
