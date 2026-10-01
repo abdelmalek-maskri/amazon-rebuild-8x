@@ -67,7 +67,11 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   `web/node_modules/next/dist/docs/` before writing web code (see `web/AGENTS.md`).
   All API calls go through `web/lib/api.ts` (typed functions, `ApiError`, 10s timeout); it
   defaults to `cache: "no-store"` because an uncached `fetch` is otherwise run once at build
-  time and frozen into the page. Prices render only through `formatPrice(cents)` in
+  time and frozen into the page. Never wrap `fetch` (or a whole server render) in a catch-all:
+  Next throws its own signal from `fetch` to stop prerendering, so `apiFetch` only converts
+  `TypeError` (network) and timeouts into `ApiError` and rethrows the rest. A web build must
+  pass with the API unreachable. Page data failures go to `app/error.tsx` (it gets `retry()`
+  in Next 16); the header catches its own failure and degrades. Prices render only through `formatPrice(cents)` in
   `web/lib/format.ts` (or the `Price` component, which uses it).
   UI: Amazon's palette lives as tokens in `web/app/globals.css` (`@theme static`, so every
   `--color-*` exists even before a class uses it); use `bg-cta`, `text-link` and so on, never raw

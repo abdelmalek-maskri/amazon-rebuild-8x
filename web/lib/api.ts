@@ -65,3 +65,64 @@ export type Health = { status: "ok" | "error"; db: "ok" | "down" };
 export function getHealth() {
   return apiFetch<Health>("/health");
 }
+
+export type Category = { slug: string; name: string; productCount: number };
+
+export type Availability =
+  | { status: "in_stock" }
+  | { status: "low_stock"; left: number }
+  | { status: "out_of_stock" };
+
+export type ProductSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  brand: string | null;
+  priceCents: number;
+  imageUrl: string;
+  ratingAvg: number;
+  ratingCount: number;
+  availability: Availability;
+};
+
+export type ProductSort = "relevance" | "featured" | "price_asc" | "price_desc" | "rating" | "newest";
+
+export type ProductQuery = {
+  q?: string;
+  category?: string;
+  brand?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  inStock?: boolean;
+  sort?: ProductSort;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ProductPage = {
+  items: ProductSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  sort: ProductSort;
+  facets: {
+    categories: { slug: string; name: string; count: number }[];
+    brands: { name: string; count: number }[];
+    ratings: { min: number; count: number }[];
+  };
+};
+
+export function getCategories() {
+  return apiFetch<{ items: Category[] }>("/categories");
+}
+
+export function searchProducts(query: ProductQuery = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === "" || value === false) continue;
+    for (const v of Array.isArray(value) ? value : [value]) params.append(key, String(v));
+  }
+  const qs = params.toString();
+  return apiFetch<ProductPage>(`/products${qs ? `?${qs}` : ""}`);
+}
