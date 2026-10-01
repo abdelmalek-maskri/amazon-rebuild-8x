@@ -28,7 +28,27 @@ export async function checkout(cartId: string | undefined, userId?: string) {
     const items = lines.map((l) => ({ productId: l.productId, title: l.title, unitPriceCents: l.priceCents, quantity: l.quantity }));
     return { orderId: await repo.createOrder(tx, cartId, userId, total, items), lines };
   });
+  return startPayment(orderId, lines, "/cart");
+}
 
+// Buy Now: an order for one product, with no basket attached, so paying for it never touches
+// what the shopper has in their basket. Same locking and pricing rules as a basket checkout.
+export async function buyNow(productId: string, quantity: number, userId?: string) {
+  const { orderId, line } = await repo.transaction(async (tx) => {
+    const line = await repo.lockProduct(tx, productId);
+    if (!line) throw new AppError(404, "PRODUCT_NOT_FOUND", "We couldn't find that product. It may have been removed.");
+    if (line.stock < quantity) {
+      throw new AppError(409, "STOCK_CHANGED", line.stock <= 0 ? "Sorry, this item is out of stock." : `Only ${line.stock} of this item ${line.stock === 1 ? "is" : "are"} available.`);
+    }
+    const item = { productId: line.productId, title: line.title, unitPriceCents: line.priceCents, quantity };
+    return { orderId: await repo.createOrder(tx, null, userId, line.priceCents * quantity, [item]), line };
+  });
+  return startPayment(orderId, [{ ...line, quantity }], `/products/${line.slug}`);
+}
+
+type PaymentLine = { title: string; imageUrl: string; priceCents: number; quantity: number };
+
+async function startPayment(orderId: string, lines: PaymentLine[], cancelPath: string) {
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create(
@@ -42,7 +62,7 @@ export async function checkout(cartId: string | undefined, userId?: string) {
         metadata: { orderId },
         payment_intent_data: { metadata: { orderId } },
         success_url: `${env.WEB_URL}/orders/${orderId}`,
-        cancel_url: `${env.WEB_URL}/cart`,
+        cancel_url: `${env.WEB_URL}${cancelPath}`,
         expires_at: Math.floor(Date.now() / 1000) + SESSION_MINUTES * 60,
       },
       // One order, one session: a retried request can never open a second payment.
