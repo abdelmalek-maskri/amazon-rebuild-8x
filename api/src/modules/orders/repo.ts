@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { cartItems, orderItems, orders, products } from "../../db/schema.js";
 
@@ -29,10 +29,11 @@ export async function lockCartLines(tx: Tx, cartId: string) {
 export async function createOrder(
   tx: Tx,
   cartId: string,
+  userId: string | undefined,
   totalCents: number,
   items: { productId: string; title: string; unitPriceCents: number; quantity: number }[],
 ) {
-  const [order] = await tx.insert(orders).values({ cartId, totalCents }).returning({ id: orders.id });
+  const [order] = await tx.insert(orders).values({ cartId, userId, totalCents }).returning({ id: orders.id });
   await tx.insert(orderItems).values(items.map((i) => ({ ...i, orderId: order!.id })));
   return order!.id;
 }
@@ -86,6 +87,7 @@ export async function findOrder(orderId: string) {
   const [order] = await db
     .select({
       id: orders.id,
+      userId: orders.userId,
       status: orders.status,
       email: orders.email,
       totalCents: orders.totalCents,
@@ -107,4 +109,35 @@ export async function findOrder(orderId: string) {
     .where(eq(orderItems.orderId, orderId))
     .orderBy(asc(orderItems.createdAt), asc(orderItems.id));
   return { ...order, items };
+}
+
+// "Your Orders": placed orders only. A pending order is an unfinished payment, not a purchase.
+export async function listUserOrders(userId: string, limit: number, offset: number) {
+  const where = and(eq(orders.userId, userId), ne(orders.status, "pending"));
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select({ id: orders.id, status: orders.status, totalCents: orders.totalCents, createdAt: orders.createdAt })
+      .from(orders)
+      .where(where)
+      .orderBy(desc(orders.createdAt), asc(orders.id))
+      .limit(limit)
+      .offset(offset),
+    db.select({ total: count() }).from(orders).where(where),
+  ]);
+  return { rows, total: totalRow?.total ?? 0 };
+}
+
+export async function itemsForOrders(orderIds: string[]) {
+  if (!orderIds.length) return [];
+  return db
+    .select({
+      orderId: orderItems.orderId,
+      title: orderItems.title,
+      quantity: orderItems.quantity,
+      product: { slug: products.slug, imageUrl: products.imageUrl },
+    })
+    .from(orderItems)
+    .innerJoin(products, eq(orderItems.productId, products.id))
+    .where(inArray(orderItems.orderId, orderIds))
+    .orderBy(asc(orderItems.createdAt), asc(orderItems.id));
 }

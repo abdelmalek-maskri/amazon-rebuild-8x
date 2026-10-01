@@ -1,19 +1,21 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
 import { db, pool } from "../src/db/index.js";
 import { carts, sessions, users } from "../src/db/schema.js";
-import { createProduct, resetDb } from "./helpers.js";
+import { closeServers, createProduct, resetDb, serve } from "./helpers.js";
 
 beforeEach(resetDb);
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 const ada = { email: "Ada@Example.com", name: "Ada", password: "correct horse battery" };
 
 // A fresh app per test gives each one its own rate limit counters.
 function shopper() {
-  return request.agent(createApp());
+  return request.agent(serve());
 }
 
 const cookieNames = (res: request.Response) => ((res.headers["set-cookie"] as unknown as string[]) ?? []).map((c) => c.split(";")[0]!);
@@ -98,7 +100,7 @@ describe("sign in and out", () => {
     await agent.post("/auth/signout").expect(200);
     expect((await agent.get("/auth/me")).body.user).toBeNull();
     // Replaying the old cookie by hand gets nothing.
-    expect((await request(createApp()).get("/auth/me").set("Cookie", oldCookie)).body.user).toBeNull();
+    expect((await request(serve()).get("/auth/me").set("Cookie", oldCookie)).body.user).toBeNull();
   });
 
   it("treats an expired session as signed out", async () => {
@@ -166,7 +168,7 @@ describe("baskets and accounts", () => {
     await agent.post("/auth/signup").send(ada).expect(201);
     await agent.post("/cart/items").send({ productId: product.id }).expect(201);
     const [owned] = await db.select().from(carts).where(eq(carts.userId, (await db.select().from(users))[0]!.id));
-    const res = await request(createApp()).get("/cart").set("Cookie", `cart_id=${owned!.id}`);
+    const res = await request(serve()).get("/cart").set("Cookie", `cart_id=${owned!.id}`);
     expect(res.body.itemCount).toBe(0);
   });
 });

@@ -1,11 +1,14 @@
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
+import { closeServers, serve } from "./helpers.js";
 import { pool } from "../src/db/index.js";
 
-const app = createApp();
+const app = serve();
 
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 describe("app skeleton", () => {
   it("reports health with the database connected", async () => {

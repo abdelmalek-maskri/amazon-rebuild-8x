@@ -1,11 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
 import { db, pool } from "../src/db/index.js";
 import { reviews } from "../src/db/schema.js";
-import { createProduct, PG, pgErrorCode, resetDb } from "./helpers.js";
+import { PG, closeServers, createProduct, pgErrorCode, resetDb, serve } from "./helpers.js";
 
-const app = createApp();
+const app = serve();
 
 let productId: string;
 
@@ -24,7 +23,10 @@ beforeAll(async () => {
     { productId, rating: 1, body: "Would not recommend!", authorName: "Ed", reviewedAt: day(2) },
   ]);
 });
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 describe("GET /products/:slug/reviews", () => {
   it("returns the average, a full five level breakdown and the newest reviews first", async () => {

@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../src/app.js";
 import { db, pool } from "../src/db/index.js";
 import { cartItems, orders, products } from "../src/db/schema.js";
 import { stripe } from "../src/lib/stripe.js";
-import { createProduct, resetDb } from "./helpers.js";
+import { closeServers, createProduct, resetDb, serve } from "./helpers.js";
 
-const app = createApp();
+const app = serve();
 const WEBHOOK_SECRET = "whsec_test_fake";
 
 // Stripe's network call is replaced; everything on our side, including signature checks, is real.
@@ -22,7 +21,10 @@ beforeEach(async () => {
     return { id: `cs_test_${sessionCount}`, url: `https://checkout.stripe.test/${sessionCount}` };
   }) as never);
 });
-afterAll(() => pool.end());
+afterAll(async () => {
+  await closeServers();
+  await pool.end();
+});
 
 async function basketWith(...lines: { priceCents: number; stock: number; quantity: number }[]) {
   const agent = request.agent(app);
@@ -185,5 +187,69 @@ describe("GET /orders/:id", () => {
   it("returns 404 for an unknown order and 400 for an id that can't exist", async () => {
     expect((await request(app).get(`/orders/${crypto.randomUUID()}`)).status).toBe(404);
     expect((await request(app).get("/orders/1 OR 1=1")).status).toBe(400);
+  });
+});
+
+describe("order history", () => {
+  const signUp = async (email: string) => {
+    const agent = request.agent(serve());
+    await agent.post("/auth/signup").send({ email, name: "Shopper", password: "a long password" }).expect(201);
+    return agent;
+  };
+
+  async function buyAs(agent: ReturnType<typeof request.agent>, paid = true) {
+    const product = await createProduct({ priceCents: 700, stock: 5 });
+    await agent.post("/cart/items").send({ productId: product.id, quantity: 1 }).expect(201);
+    const res = await agent.post("/checkout").expect(201);
+    const [order] = await db.select().from(orders).where(eq(orders.id, res.body.orderId));
+    if (paid) await sendEvent("checkout.session.completed", paidSession(order!)).expect(200);
+    return order!;
+  }
+
+  it("links an order placed while signed in to that account, and leaves guest orders unlinked", async () => {
+    const ada = await signUp("ada@example.com");
+    const mine = await buyAs(ada);
+    const guest = await buyAs(request.agent(app));
+    const [linked] = await db.select().from(orders).where(eq(orders.id, mine.id));
+    const [unlinked] = await db.select().from(orders).where(eq(orders.id, guest.id));
+    expect(linked!.userId).not.toBeNull();
+    expect(unlinked!.userId).toBeNull();
+  });
+
+  it("lists only my placed orders, newest first, never pending ones", async () => {
+    const ada = await signUp("ada@example.com");
+    const bob = await signUp("bob@example.com");
+    const first = await buyAs(ada);
+    const second = await buyAs(ada);
+    await buyAs(ada, false); // checkout started but never paid
+    await buyAs(bob);
+
+    const res = await ada.get("/orders");
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.items.map((o: { id: string }) => o.id)).toEqual([second.id, first.id]);
+    expect(res.body.items[0]).toMatchObject({ status: "paid", totalCents: 700, itemCount: 1, lines: [{ title: "Test product", quantity: 1 }] });
+  });
+
+  it("asks guests to sign in", async () => {
+    const res = await request(app).get("/orders");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("SIGN_IN_REQUIRED");
+  });
+
+  it("opens an account's order only for that account, even with the link", async () => {
+    const ada = await signUp("ada@example.com");
+    const bob = await signUp("bob@example.com");
+    const order = await buyAs(ada);
+    expect((await ada.get(`/orders/${order.id}`)).status).toBe(200);
+    expect((await bob.get(`/orders/${order.id}`)).status).toBe(404);
+    expect((await request(app).get(`/orders/${order.id}`)).status).toBe(404);
+  });
+
+  it("still opens a guest order for anyone with the link", async () => {
+    const order = await buyAs(request.agent(app));
+    const bob = await signUp("bob@example.com");
+    expect((await request(app).get(`/orders/${order.id}`)).status).toBe(200);
+    expect((await bob.get(`/orders/${order.id}`)).status).toBe(200);
   });
 });

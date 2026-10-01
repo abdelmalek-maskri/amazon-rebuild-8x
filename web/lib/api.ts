@@ -211,8 +211,20 @@ export type Order = {
   items: { title: string; unitPriceCents: number; quantity: number; lineTotalCents: number; product: { slug: string; imageUrl: string } }[];
 };
 
-export function getOrder(id: string) {
-  return apiFetch<Order>(`/orders/${encodeURIComponent(id)}`);
+// An account's order only opens for that account, so server code passes the session along.
+export function getOrder(id: string, cookie?: string) {
+  return apiFetch<Order>(`/orders/${encodeURIComponent(id)}`, cookie ? { headers: { Cookie: cookie } } : {});
+}
+
+export type OrderSummary = Pick<Order, "id" | "status" | "totalCents" | "createdAt"> & {
+  itemCount: number;
+  lines: { title: string; quantity: number; product: { slug: string; imageUrl: string } }[];
+};
+
+export function listOrders(cookie: string, page = 1) {
+  return apiFetch<{ items: OrderSummary[]; total: number; page: number; pageSize: number }>(`/orders?page=${page}`, {
+    headers: { Cookie: cookie },
+  });
 }
 
 export type User = { id: string; email: string; name: string };
