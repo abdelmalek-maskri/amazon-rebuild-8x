@@ -41,12 +41,15 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       signal: init.signal ?? AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {
-    const timedOut = err instanceof DOMException && err.name === "TimeoutError";
-    throw new ApiError(
-      0,
-      timedOut ? "TIMEOUT" : "NETWORK_ERROR",
-      timedOut ? "The store took too long to respond. Please try again." : "We couldn't reach the store. Check your connection and try again.",
-    );
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new ApiError(0, "TIMEOUT", "The store took too long to respond. Please try again.");
+    }
+    // fetch reports network failures as TypeError. Anything else must pass through untouched:
+    // Next.js throws its own signal from fetch to stop prerendering, and swallowing it breaks the build.
+    if (err instanceof TypeError) {
+      throw new ApiError(0, "NETWORK_ERROR", "We couldn't reach the store. Check your connection and try again.");
+    }
+    throw err;
   }
 
   const body: unknown = await res.json().catch(() => null);
