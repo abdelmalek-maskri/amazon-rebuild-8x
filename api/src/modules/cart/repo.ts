@@ -1,12 +1,18 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { cartItems, carts, categories, products } from "../../db/schema.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export async function cartExists(cartId: string) {
-  const [row] = await db.select({ id: carts.id }).from(carts).where(eq(carts.id, cartId));
+// A guest cookie only ever opens a guest basket, never one that belongs to an account.
+export async function guestCartExists(cartId: string) {
+  const [row] = await db.select({ id: carts.id }).from(carts).where(and(eq(carts.id, cartId), isNull(carts.userId)));
   return Boolean(row);
+}
+
+export async function userCartId(userId: string) {
+  const [row] = await db.select({ id: carts.id }).from(carts).where(eq(carts.userId, userId));
+  return row?.id;
 }
 
 // Lines joined to the live product row: prices and stock always come from the database, never from
@@ -40,9 +46,37 @@ export function transaction<T>(fn: (tx: Tx) => Promise<T>) {
   return db.transaction(fn);
 }
 
-export async function createCart(tx: Tx) {
-  const [cart] = await tx.insert(carts).values({}).returning({ id: carts.id });
+export async function createCart(tx: Tx, userId?: string) {
+  const [cart] = await tx.insert(carts).values({ userId }).returning({ id: carts.id });
   return cart!.id;
+}
+
+export async function claimGuestCart(tx: Tx, cartId: string, userId: string) {
+  await tx.update(carts).set({ userId, updatedAt: new Date() }).where(and(eq(carts.id, cartId), isNull(carts.userId)));
+}
+
+export async function lockCart(tx: Tx, cartId: string) {
+  const [row] = await tx.select({ id: carts.id, userId: carts.userId }).from(carts).where(eq(carts.id, cartId)).for("update");
+  return row;
+}
+
+export async function linesForMerge(tx: Tx, cartId: string) {
+  return tx
+    .select({ productId: cartItems.productId, quantity: cartItems.quantity })
+    .from(cartItems)
+    .where(eq(cartItems.cartId, cartId))
+    .orderBy(asc(cartItems.productId));
+}
+
+export async function setLine(tx: Tx, cartId: string, productId: string, quantity: number) {
+  await tx
+    .insert(cartItems)
+    .values({ cartId, productId, quantity })
+    .onConflictDoUpdate({ target: [cartItems.cartId, cartItems.productId], set: { quantity, updatedAt: new Date() } });
+}
+
+export async function deleteCart(tx: Tx, cartId: string) {
+  await tx.delete(carts).where(eq(carts.id, cartId));
 }
 
 export async function touchCart(tx: Tx, cartId: string) {

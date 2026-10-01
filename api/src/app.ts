@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db/index.js";
 import { errorHandler, notFound } from "./lib/errors.js";
 import { httpLogger } from "./lib/logger.js";
+import { authRoutes, loadUser } from "./modules/auth/routes.js";
 import { cartRoutes } from "./modules/cart/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
 import { orderRoutes, webhookRoutes } from "./modules/orders/routes.js";
@@ -31,6 +32,8 @@ export function createApp() {
     }
   });
 
+  app.use(loadUser);
+  app.use(authRoutes());
   app.use(catalogRoutes);
   app.use(cartRoutes);
   app.use(reviewRoutes);
