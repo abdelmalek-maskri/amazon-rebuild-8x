@@ -11,7 +11,7 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16">
+    <div className="mx-auto w-full max-w-2xl px-4 py-16">
       <ErrorState
         title="Something went wrong on our side"
         message="We couldn't load this page. It's not something you did. Please try again in a moment."

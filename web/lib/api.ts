@@ -146,3 +146,34 @@ export function getSuggestions(q: string, signal?: AbortSignal) {
   // "default" so the browser may reuse the API's 60 second cache for a prefix typed again.
   return apiFetch<Suggestions>(`/suggestions?q=${encodeURIComponent(q)}`, { signal, cache: "default" });
 }
+
+export type CartLine = {
+  id: string;
+  quantity: number;
+  lineTotalCents: number;
+  maxQuantity: number;
+  product: Pick<ProductSummary, "id" | "slug" | "title" | "brand" | "imageUrl" | "priceCents" | "availability"> & {
+    description: string;
+    categorySlug: string;
+  };
+};
+
+export type Cart = { items: CartLine[]; itemCount: number; subtotalCents: number };
+
+// From the browser the cookie travels by itself. Server code calls the API directly, so it must
+// pass the cart id along (see lib/cart-server.ts).
+export function getCart(cartId?: string) {
+  return apiFetch<Cart>("/cart", cartId ? { headers: { Cookie: `cart_id=${cartId}` } } : {});
+}
+
+export function addToCart(productId: string, quantity: number) {
+  return apiFetch<Cart>("/cart/items", { method: "POST", body: JSON.stringify({ productId, quantity }) });
+}
+
+export function updateCartItem(itemId: string, quantity: number) {
+  return apiFetch<Cart>(`/cart/items/${encodeURIComponent(itemId)}`, { method: "PATCH", body: JSON.stringify({ quantity }) });
+}
+
+export function removeCartItem(itemId: string) {
+  return apiFetch<Cart>(`/cart/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+}

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Shaped like the home page so nothing jumps when the real content streams in.
 export default function Loading() {
   return (
-    <div className="bg-page pb-4" aria-busy="true" aria-label="Loading">
+    <div className="flex-1 bg-page pb-12" aria-busy="true" aria-label="Loading">
       <div className="bg-nav-light px-4 pt-10 pb-16 sm:pt-14">
         <Skeleton className="mx-auto h-9 w-2/3 max-w-lg bg-surface/15" />
       </div>

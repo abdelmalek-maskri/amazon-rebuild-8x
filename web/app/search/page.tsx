@@ -49,7 +49,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const filterCount = activeFilterCount(state);
 
   return (
-    <div className="mx-auto max-w-375 px-3 py-4 sm:px-4">
+    <div className="mx-auto w-full max-w-375 px-3 pt-4 pb-12 sm:px-4">
       <ResultsBar state={state} result={result} />
       <ActiveFilters state={state} facets={result.facets} />
 

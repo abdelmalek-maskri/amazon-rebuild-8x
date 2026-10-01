@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BasketIcon, Smile } from "@/components/icons";
 import { ApiError, getCategories, type Category } from "@/lib/api";
+import { getServerCartCount } from "@/lib/cart-server";
 import { SITE_NAME } from "@/lib/site";
 import { SearchBar, SearchForm } from "./search-bar";
 
@@ -16,7 +17,7 @@ async function loadCategories(): Promise<Category[]> {
 }
 
 export async function Header() {
-  const categories = await loadCategories();
+  const [categories, basketCount] = await Promise.all([loadCategories(), getServerCartCount()]);
 
   return (
     <header>
@@ -43,10 +44,19 @@ export async function Header() {
 
           <Link
             href="/cart"
+            aria-label={`Basket, ${basketCount} ${basketCount === 1 ? "item" : "items"}`}
             className="ml-auto flex shrink-0 items-end gap-1 rounded px-2 py-1 hover:ring-1 hover:ring-surface sm:ml-0"
           >
-            <BasketIcon />
-            <span className="pb-0.5 text-sm font-bold">Basket</span>
+            {/* Amazon's count sits inside the basket in orange; it shows 0 too, so the icon never jumps. */}
+            <span className="relative">
+              <BasketIcon />
+              <span aria-hidden className="absolute -top-1.5 left-1/2 -translate-x-1/3 text-base leading-none font-bold text-buy">
+                {basketCount > 99 ? "99+" : basketCount}
+              </span>
+            </span>
+            <span aria-hidden className="pb-0.5 text-sm font-bold">
+              Basket
+            </span>
           </Link>
         </div>
       </div>

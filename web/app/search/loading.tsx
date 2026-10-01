@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-375 px-3 py-4 sm:px-4" aria-busy="true" aria-label="Loading results">
+    <div className="mx-auto w-full max-w-375 px-3 pt-4 pb-12 sm:px-4" aria-busy="true" aria-label="Loading results">
       <div className="flex items-center justify-between border-b border-border pb-3">
         <Skeleton className="h-5 w-48" />
         <Skeleton className="h-9 w-44" />
