@@ -6,18 +6,22 @@ export async function resetDb() {
   await db.execute(sql`truncate categories, products, carts, cart_items, orders, order_items restart identity cascade`);
 }
 
-export async function createProduct(overrides: Partial<typeof products.$inferInsert> = {}) {
+export async function createCategory(overrides: Partial<typeof categories.$inferInsert> = {}) {
   const [category] = await db
     .insert(categories)
-    .values({ slug: `cat-${crypto.randomUUID()}`, name: "Test category" })
+    .values({ slug: `cat-${crypto.randomUUID()}`, name: "Test category", ...overrides })
     .returning();
+  return category!;
+}
+
+export async function createProduct(overrides: Partial<typeof products.$inferInsert> = {}) {
   const [product] = await db
     .insert(products)
     .values({
       slug: `product-${crypto.randomUUID()}`,
       title: "Test product",
       description: "A product for tests",
-      categoryId: category!.id,
+      categoryId: overrides.categoryId ?? (await createCategory()).id,
       priceCents: 1999,
       stock: 5,
       imageUrl: "https://example.com/p.webp",
