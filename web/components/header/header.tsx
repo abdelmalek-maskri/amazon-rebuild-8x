@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BasketIcon, Smile } from "@/components/icons";
 import { ApiError, getCategories, type Category } from "@/lib/api";
-import { getServerCartCount } from "@/lib/cart-server";
+import { getHeaderState } from "@/lib/server-session";
+import { AccountMenu } from "./account-menu";
 import { SITE_NAME } from "@/lib/site";
 import { SearchBar, SearchForm } from "./search-bar";
 
@@ -17,7 +18,7 @@ async function loadCategories(): Promise<Category[]> {
 }
 
 export async function Header() {
-  const [categories, basketCount] = await Promise.all([loadCategories(), getServerCartCount()]);
+  const [categories, { basketCount, user }] = await Promise.all([loadCategories(), getHeaderState()]);
 
   return (
     <header>
@@ -42,10 +43,17 @@ export async function Header() {
             </Suspense>
           </div>
 
+          {/* useSearchParams inside needs a Suspense boundary; the fallback is the signed out link's shape. */}
+          <div className="ml-auto sm:ml-0">
+            <Suspense fallback={<span className="block w-28" />}>
+              <AccountMenu user={user} />
+            </Suspense>
+          </div>
+
           <Link
             href="/cart"
             aria-label={`Basket, ${basketCount} ${basketCount === 1 ? "item" : "items"}`}
-            className="ml-auto flex shrink-0 items-end gap-1 rounded px-2 py-1 hover:ring-1 hover:ring-surface sm:ml-0"
+            className="flex shrink-0 items-end gap-1 rounded px-2 py-1 hover:ring-1 hover:ring-surface"
           >
             {/* Amazon's count sits inside the basket in orange; it shows 0 too, so the icon never jumps. */}
             <span className="relative">

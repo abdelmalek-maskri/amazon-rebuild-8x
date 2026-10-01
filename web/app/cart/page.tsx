@@ -5,7 +5,8 @@ import { CheckoutButton } from "@/components/cart/checkout-button";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/state";
 import { ApiError, searchProducts, type Cart, type ProductSummary } from "@/lib/api";
-import { getServerCart } from "@/lib/cart-server";
+import { getServerCart, getServerUser } from "@/lib/server-session";
+import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Basket", robots: { index: false } };
@@ -36,7 +37,7 @@ async function suggestionsFor(cart: Cart): Promise<{ title: string; items: Produ
 }
 
 export default async function CartPage() {
-  const cart = await getServerCart();
+  const [cart, user] = await Promise.all([getServerCart(), getServerUser()]);
   const suggestions = await suggestionsFor(cart);
 
   if (cart.items.length === 0) {
@@ -90,6 +91,15 @@ export default async function CartPage() {
             <div className="bg-surface p-4 sm:p-6">
               <p className="text-lg">{subtotal}</p>
               <CheckoutButton blocked={blocked} />
+              {/* A nudge, never a gate: guests check out exactly as before. */}
+              {!user && (
+                <p className="mt-3 border-t border-border pt-3 text-center text-xs">
+                  <Link href="/signin?next=/cart" className="text-link hover:text-link-hover hover:underline">
+                    Sign in
+                  </Link>{" "}
+                  to save your basket across devices.
+                </p>
+              )}
             </div>
             <ul className="hidden flex-col gap-2 bg-surface p-4 text-sm sm:p-6 lg:flex">
               <li>
@@ -99,7 +109,7 @@ export default async function CartPage() {
                 <strong>Secure payment.</strong> Card details go straight to Stripe; we never see them.
               </li>
               <li>
-                <strong>Your basket is saved</strong> on this device for 30 days.
+                <strong>Your basket is saved</strong> {user ? "to your account, on every device." : "on this device for 30 days."}
               </li>
             </ul>
           </aside>

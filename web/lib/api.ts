@@ -160,10 +160,10 @@ export type CartLine = {
 
 export type Cart = { items: CartLine[]; itemCount: number; subtotalCents: number };
 
-// From the browser the cookie travels by itself. Server code calls the API directly, so it must
-// pass the cart id along (see lib/cart-server.ts).
-export function getCart(cartId?: string) {
-  return apiFetch<Cart>("/cart", cartId ? { headers: { Cookie: `cart_id=${cartId}` } } : {});
+// From the browser cookies travel by themselves. Server code calls the API directly, so it must
+// pass them along (see lib/server-session.ts).
+export function getCart(cookie?: string) {
+  return apiFetch<Cart>("/cart", cookie ? { headers: { Cookie: cookie } } : {});
 }
 
 export function addToCart(productId: string, quantity: number) {
@@ -213,4 +213,22 @@ export type Order = {
 
 export function getOrder(id: string) {
   return apiFetch<Order>(`/orders/${encodeURIComponent(id)}`);
+}
+
+export type User = { id: string; email: string; name: string };
+
+export function getMe(cookie?: string) {
+  return apiFetch<{ user: User | null }>("/auth/me", cookie ? { headers: { Cookie: cookie } } : {});
+}
+
+export function signIn(email: string, password: string) {
+  return apiFetch<{ user: User }>("/auth/signin", { method: "POST", body: JSON.stringify({ email, password }) });
+}
+
+export function signUp(name: string, email: string, password: string) {
+  return apiFetch<{ user: User }>("/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }) });
+}
+
+export function signOut() {
+  return apiFetch<{ user: null }>("/auth/signout", { method: "POST" });
 }

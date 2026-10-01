@@ -87,9 +87,11 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   can't send a 404. Product pages have no `loading.tsx` so unknown slugs return a real 404, and
   the home skeleton lives in the `app/(home)/` route group so it doesn't wrap other routes.
   Never call `notFound()` inside a try/catch: it works by throwing.
-  Cart on the web: browser calls go through `/api` and carry the cookie themselves. Server
-  components call the API directly, so they must use `web/lib/cart-server.ts`, which forwards
-  only the `cart_id` cookie. After any cart change, client code calls `router.refresh()` so the
+  Cookies on the web: browser calls go through `/api` and carry cookies themselves. Server
+  components call the API directly, so they must use `web/lib/server-session.ts`
+  (`getServerCart`, `getServerUser`, `getHeaderState`), which forwards only `session` and
+  `cart_id`, and only if they look valid. A signed in shopper has no `cart_id` cookie at all.
+  Post sign in redirects go through `safeNext()` in `web/lib/next-path.ts` (same site paths only). After any cart change, client code calls `router.refresh()` so the
   header count and totals re-render from the server; never keep a client-side copy of the cart.
   Pages that fill the screen with grey use `flex-1` (the layout's `<main>` is a flex column), and
   centred containers need `w-full` next to `mx-auto` or they shrink to their content.
