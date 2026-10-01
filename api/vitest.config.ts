@@ -15,7 +15,6 @@ export default defineConfig({
       STRIPE_SECRET_KEY: "sk_test_fake",
       STRIPE_WEBHOOK_SECRET: "whsec_test_fake",
       WEB_URL: "http://localhost:3000",
-      PROXY_SECRET: "test-proxy-secret-test-proxy-secret-0123",
     },
   },
 });
