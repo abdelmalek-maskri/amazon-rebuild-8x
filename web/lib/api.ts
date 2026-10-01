@@ -177,3 +177,20 @@ export function updateCartItem(itemId: string, quantity: number) {
 export function removeCartItem(itemId: string) {
   return apiFetch<Cart>(`/cart/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
 }
+
+export type Review = { id: string; rating: number; body: string; authorName: string; reviewedAt: string };
+
+export type ReviewPage = {
+  average: number;
+  count: number;
+  breakdown: { stars: number; count: number }[];
+  items: Review[];
+  total: number;
+  page: number;
+  pageSize: number;
+  stars: number | null;
+};
+
+export function getProductReviews(slug: string, stars?: number) {
+  return apiFetch<ReviewPage>(`/products/${encodeURIComponent(slug)}/reviews${stars ? `?stars=${stars}` : ""}`);
+}

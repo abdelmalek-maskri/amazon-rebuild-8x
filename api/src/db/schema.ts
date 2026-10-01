@@ -122,3 +122,25 @@ export const orderItems = pgTable(
     index("order_items_product_id_idx").on(t.productId),
   ],
 );
+
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: id(),
+    // Cascade: reviews mean nothing without their product.
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    rating: integer().notNull(),
+    body: text().notNull(),
+    authorName: text().notNull(),
+    // When the review was written, which is what shoppers see; created_at is when the row was stored.
+    reviewedAt: timestamp({ withTimezone: true }).notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    check("reviews_rating_range", sql`${t.rating} between 1 and 5`),
+    // Serves the product's list, newest first, and the per-star breakdown.
+    index("reviews_product_id_reviewed_at_idx").on(t.productId, t.reviewedAt),
+  ],
+);
