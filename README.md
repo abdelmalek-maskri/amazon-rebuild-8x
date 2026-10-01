@@ -46,11 +46,6 @@ No real money moves. Stripe runs in test mode, and the API refuses to start with
 | Hero carousel cuts headlines mid word | No carousel. A grid that reflows on every screen size |
 | A search inside one department that finds nothing is a dead end | One click to search all departments |
 
-> **Screenshots to add:**
-> basket with "Customers also viewed" (`docs/screenshots/basket.png`),
-> order confirmation and Your Orders (`docs/screenshots/orders.png`),
-> the same pages on a phone (`docs/screenshots/mobile.png`)
-
 ## How it works
 
 ```text
