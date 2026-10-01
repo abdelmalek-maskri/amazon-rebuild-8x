@@ -64,7 +64,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
     searchProducts({ category: product.category.slug, sort: "featured", pageSize: 7 }),
     loadReviews(product.slug, stars),
     loadEligibility(product.slug),
-    // A failed lookup just shows "Add to List" unsaved; never worth failing the page.
+    // A failed lookup just shows "Add to Wishlist" unsaved; never worth failing the page.
     getServerSaveState(product.id).catch((err) => {
       if (err instanceof ApiError) return { signedIn: false, saved: false };
       throw err;

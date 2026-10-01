@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ApiError, addToWishlist, removeFromWishlist } from "@/lib/api";
 import { cn } from "@/lib/cn";
 
-// "Add to List" like Amazon's. Guests get a link to sign in that brings them straight back.
+// Amazon calls it "Add to List"; "Wishlist" says what the list is. Guests get a link to sign in that brings them straight back.
 export function SaveToList({ productId, slug, signedIn, initiallySaved }: { productId: string; slug: string; signedIn: boolean; initiallySaved: boolean }) {
   const [saved, setSaved] = useState(initiallySaved);
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export function SaveToList({ productId, slug, signedIn, initiallySaved }: { prod
   if (!signedIn) {
     return (
       <Link href={`/signin?next=${encodeURIComponent(`/products/${slug}`)}`} className={style}>
-        Add to List
+        Add to Wishlist
       </Link>
     );
   }
@@ -41,7 +41,7 @@ export function SaveToList({ productId, slug, signedIn, initiallySaved }: { prod
     <div className="flex flex-col gap-1">
       <button type="button" onClick={toggle} disabled={busy} aria-pressed={saved} className={cn(style, saved && "border-link text-link")}>
         <span aria-hidden>{saved ? "♥" : "♡"}</span>
-        {saved ? "Saved to your list" : "Add to List"}
+        {saved ? "Saved to your wishlist" : "Add to Wishlist"}
       </button>
       {saved && (
         <Link href="/wishlist" className="text-center text-xs text-link hover:text-link-hover hover:underline">

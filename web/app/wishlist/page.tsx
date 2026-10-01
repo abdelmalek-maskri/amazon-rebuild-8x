@@ -29,7 +29,7 @@ export default async function WishlistPage() {
         <EmptyState
           className="mt-6"
           title="Your Wish List is empty"
-          message='Use "Add to List" on any product to save it for later.'
+          message='Use "Add to Wishlist" on any product to save it for later.'
           action={<ButtonLink href="/">Start shopping</ButtonLink>}
         />
       ) : (
