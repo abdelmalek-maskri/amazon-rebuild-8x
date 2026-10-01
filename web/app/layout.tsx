@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header/header";
+import { CartDrawerProvider } from "@/components/cart/cart-drawer";
 import { ToastProvider } from "@/components/ui/toast";
 import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
@@ -19,11 +20,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={inter.variable}>
       <body id="top" className="flex min-h-dvh flex-col">
         <ToastProvider>
-          <Header />
-          <main id="main" className="flex flex-1 flex-col">
-            {children}
-          </main>
-          <Footer />
+          <CartDrawerProvider>
+            <Header />
+            <main id="main" className="flex flex-1 flex-col">
+              {children}
+            </main>
+            <Footer />
+          </CartDrawerProvider>
         </ToastProvider>
       </body>
     </html>
