@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { CartLine } from "@/components/cart/cart-line";
 import { ProductCard } from "@/components/product-card";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { CheckoutButton } from "@/components/cart/checkout-button";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/state";
 import { ApiError, searchProducts, type Cart, type ProductSummary } from "@/lib/api";
 import { getServerCart } from "@/lib/cart-server";
@@ -88,16 +89,14 @@ export default async function CartPage() {
           <aside aria-label="Order summary" className="order-first flex flex-col gap-4 lg:sticky lg:top-4 lg:order-none lg:w-80">
             <div className="bg-surface p-4 sm:p-6">
               <p className="text-lg">{subtotal}</p>
-              <Button fullWidth className="mt-4" disabled aria-describedby="checkout-note">
-                Proceed to checkout
-              </Button>
-              <p id="checkout-note" className="mt-2 text-center text-xs text-muted">
-                {blocked ? "Fix the items marked in red to check out." : "Checkout is coming in the next update."}
-              </p>
+              <CheckoutButton blocked={blocked} />
             </div>
             <ul className="hidden flex-col gap-2 bg-surface p-4 text-sm sm:p-6 lg:flex">
               <li>
                 <strong>Guest checkout.</strong> No account or sign in needed.
+              </li>
+              <li>
+                <strong>Secure payment.</strong> Card details go straight to Stripe; we never see them.
               </li>
               <li>
                 <strong>Your basket is saved</strong> on this device for 30 days.

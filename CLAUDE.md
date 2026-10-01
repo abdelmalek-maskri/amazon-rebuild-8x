@@ -123,6 +123,16 @@ Money and trust rules:
   The signed Stripe webhook marks it `paid` only if still `pending` (duplicate webhooks do
   nothing), decrements stock with a `stock >= qty` guard and empties the cart, in one
   transaction. If stock ran out meanwhile the order becomes `needs_refund`.
+* Checkout (`api/src/modules/orders`): `POST /checkout` locks the cart's product rows (in id
+  order, so checkouts can't deadlock), rejects stock shortfalls with 409 `STOCK_CHANGED`, writes
+  the pending order, then creates the Stripe session outside the transaction (idempotency key
+  `checkout-<orderId>`, 30 minute expiry). If Stripe fails the order is deleted and the shopper
+  gets a 502. Stock is only taken by the webhook. `/webhooks/stripe` is mounted before
+  `express.json()` because the signature covers the raw body. `env.ts` refuses `sk_live_` keys.
+* Local Stripe: `stripe listen --forward-to localhost:4000/webhooks/stripe` and put its
+  `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
+  Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
+  on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
 * Guests are identified by an httpOnly cart cookie; orders are reached by their UUID.
 * Cart (`api/src/modules/cart`): the `cart_id` cookie (httpOnly, SameSite=Lax, Secure in
   production, 30 days) is set only on the first add, and any value that isn't a UUID of an

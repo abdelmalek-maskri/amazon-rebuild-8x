@@ -8,6 +8,11 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  // Test keys only: this store must never be able to take real money, even if misconfigured.
+  STRIPE_SECRET_KEY: z.string().regex(/^sk_test_\w+$/, "must be a Stripe test key (sk_test_...)"),
+  STRIPE_WEBHOOK_SECRET: z.string().regex(/^whsec_\w+$/, "must be a Stripe webhook signing secret (whsec_...)"),
+  // Where Stripe sends shoppers back to after paying or cancelling.
+  WEB_URL: z.url({ protocol: /^https?$/ }).transform((u) => u.replace(/\/$/, "")),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -6,6 +6,7 @@ import { errorHandler, notFound } from "./lib/errors.js";
 import { httpLogger } from "./lib/logger.js";
 import { cartRoutes } from "./modules/cart/routes.js";
 import { catalogRoutes } from "./modules/catalog/routes.js";
+import { orderRoutes, webhookRoutes } from "./modules/orders/routes.js";
 import { reviewRoutes } from "./modules/reviews/routes.js";
 
 export function createApp() {
@@ -15,6 +16,8 @@ export function createApp() {
   app.set("trust proxy", 1);
   app.use(helmet());
   app.use(httpLogger);
+  // Before express.json(): Stripe signs the raw body, and a parsed body can no longer be verified.
+  app.use(webhookRoutes);
   app.use(express.json({ limit: "100kb" }));
 
   app.get("/health", async (_req, res) => {
@@ -31,6 +34,7 @@ export function createApp() {
   app.use(catalogRoutes);
   app.use(cartRoutes);
   app.use(reviewRoutes);
+  app.use(orderRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
