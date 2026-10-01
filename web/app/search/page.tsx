@@ -57,17 +57,25 @@ export default async function SearchPage({ searchParams }: Props) {
         {/* Phones: a native disclosure, no JavaScript needed. Desktop: an always open sidebar. */}
         <details className="rounded-lg border border-border md:hidden">
           <summary className="flex min-h-11 cursor-pointer items-center px-4 font-bold">
-            Filters{filterCount > 0 && ` (${filterCount})`}
+            {/* A real h2, so on phones the filter groups' h3s sit under a heading too. */}
+            <h2 className="text-base">Filters{filterCount > 0 && ` (${filterCount})`}</h2>
           </summary>
           <div className="border-t border-border p-4">
             <Filters state={state} facets={result.facets} />
           </div>
         </details>
-        <aside aria-label="Filters" className="hidden w-56 shrink-0 md:block">
+        <aside aria-labelledby="filters-heading" className="hidden w-56 shrink-0 md:block">
+          {/* Headings must step down one level at a time: h1 results bar, h2 here, h3 per filter group. */}
+          <h2 id="filters-heading" className="sr-only">
+            Filters
+          </h2>
           <Filters state={state} facets={result.facets} />
         </aside>
 
-        <section aria-label="Results" className="min-w-0 flex-1">
+        <section aria-labelledby="results-heading" className="min-w-0 flex-1">
+          <h2 id="results-heading" className="sr-only">
+            Results
+          </h2>
           {result.items.length > 0 ? (
             <>
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
@@ -156,7 +164,7 @@ function ActiveFilters({ state, facets }: { state: SearchState; facets: ProductP
         </li>
       ))}
       <li>
-        <Link href={searchHref({ ...state, category: undefined, brand: [], minPrice: undefined, maxPrice: undefined, minRating: undefined, inStock: false })} scroll={false} className="px-2 text-link hover:text-link-hover hover:underline">
+        <Link href={searchHref({ ...state, category: undefined, brand: [], minPrice: undefined, maxPrice: undefined, minRating: undefined, inStock: false })} scroll={false} className="inline-flex min-h-11 items-center md:min-h-0 px-2 text-link hover:text-link-hover hover:underline">
           Clear all
         </Link>
       </li>
