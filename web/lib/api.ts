@@ -126,3 +126,13 @@ export function searchProducts(query: ProductQuery = {}) {
   const qs = params.toString();
   return apiFetch<ProductPage>(`/products${qs ? `?${qs}` : ""}`);
 }
+
+export type Suggestions = {
+  products: Pick<ProductSummary, "slug" | "title" | "brand" | "imageUrl">[];
+  categories: { slug: string; name: string }[];
+};
+
+export function getSuggestions(q: string, signal?: AbortSignal) {
+  // "default" so the browser may reuse the API's 60 second cache for a prefix typed again.
+  return apiFetch<Suggestions>(`/suggestions?q=${encodeURIComponent(q)}`, { signal, cache: "default" });
+}

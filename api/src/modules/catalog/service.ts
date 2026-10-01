@@ -40,3 +40,8 @@ export async function getProduct(slug: string) {
 export async function getCategories() {
   return { items: await repo.listCategories() };
 }
+
+export async function getSuggestions(q: string) {
+  const [products, categories] = await Promise.all([repo.suggestProducts(q, 6), repo.suggestCategories(q, 3)]);
+  return { products, categories };
+}

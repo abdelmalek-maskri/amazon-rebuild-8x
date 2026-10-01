@@ -150,3 +150,37 @@ export async function listCategories() {
     .groupBy(categories.slug, categories.name)
     .orderBy(asc(categories.name));
 }
+
+// As-you-type suggestions. Every word must match somewhere, like search, so a suggestion never
+// promises what Enter would not find. Ranking: title starts with the query, then a title word
+// starts with it, then the title contains it, then brand or description matches.
+export async function suggestProducts(q: string, limit: number) {
+  const terms = searchTerms(q);
+  const match = terms.map((t) => {
+    const like = `%${escapeLike(t)}%`;
+    return or(ilike(products.title, like), ilike(products.brand, like), ilike(products.description, like))!;
+  });
+  const whole = escapeLike(q.trim());
+  return db
+    .select({ slug: products.slug, title: products.title, brand: products.brand, imageUrl: products.imageUrl })
+    .from(products)
+    .where(and(...match))
+    .orderBy(
+      sql`(case when ${products.title} ilike ${`${whole}%`} then 0
+                when ${products.title} ilike ${`% ${whole}%`} then 1
+                when ${products.title} ilike ${`%${whole}%`} then 2
+                else 3 end)`,
+      desc(products.ratingAvg),
+      asc(products.title),
+    )
+    .limit(limit);
+}
+
+export async function suggestCategories(q: string, limit: number) {
+  return db
+    .select({ slug: categories.slug, name: categories.name })
+    .from(categories)
+    .where(ilike(categories.name, `%${escapeLike(q.trim())}%`))
+    .orderBy(asc(categories.name))
+    .limit(limit);
+}
