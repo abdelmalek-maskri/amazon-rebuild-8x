@@ -54,27 +54,30 @@ export function AddToBasket({ productId, max }: { productId: string; max: number
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <label className="flex items-center gap-2 text-sm">
-        <span>Quantity</span>
-        <select
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className="min-h-11 cursor-pointer rounded-lg border border-border bg-page px-3 shadow-sm md:min-h-9"
-        >
-          {Array.from({ length: max }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Button ref={addRef} fullWidth onClick={add} loading={saving} disabled={buying}>
-        Add to basket
-      </Button>
-      <Button fullWidth variant="buy" onClick={buy} loading={buying} disabled={saving}>
-        {buying ? "Opening secure payment" : "Buy Now"}
-      </Button>
+    <div className="flex flex-col gap-2">
+      {/* One row on wider screens: quantity, then the two actions side by side. */}
+      <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr] sm:items-end">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-xs text-muted">Quantity</span>
+          <select
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className="min-h-11 cursor-pointer rounded-lg border border-border bg-page px-3 shadow-sm"
+          >
+            {Array.from({ length: max }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button ref={addRef} fullWidth onClick={add} loading={saving} disabled={buying}>
+          Add to basket
+        </Button>
+        <Button fullWidth variant="buy" onClick={buy} loading={buying} disabled={saving}>
+          {buying ? "Opening payment" : "Buy Now"}
+        </Button>
+      </div>
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}
