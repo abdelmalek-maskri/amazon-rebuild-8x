@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ApiError, getCart, getMe, getOrder, listOrders, type Cart, type User } from "@/lib/api";
+import { ApiError, getCart, getMe, getOrder, getReviewEligibility, listOrders, type Cart, type User } from "@/lib/api";
 
 const EMPTY: Cart = { items: [], itemCount: 0, subtotalCents: 0 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,4 +46,8 @@ export async function getServerOrders(page = 1) {
   const cookie = await forwardedCookie();
   if (!cookie || !(await getServerUser())) return null;
   return listOrders(cookie, page);
+}
+
+export async function getServerReviewEligibility(slug: string) {
+  return getReviewEligibility(slug, await forwardedCookie());
 }

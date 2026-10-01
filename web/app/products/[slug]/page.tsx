@@ -8,7 +8,8 @@ import { Gallery } from "@/components/product/gallery";
 import { Price } from "@/components/ui/price";
 import { Rating } from "@/components/ui/rating";
 import { Reviews } from "@/components/product/reviews";
-import { ApiError, getProduct, getProductReviews, searchProducts, type ReviewPage } from "@/lib/api";
+import { ApiError, getProduct, getProductReviews, searchProducts, type ReviewEligibility, type ReviewPage } from "@/lib/api";
+import { getServerReviewEligibility } from "@/lib/server-session";
 
 // One request per render, shared by generateMetadata and the page.
 const loadProduct = cache(async (slug: string) => {
@@ -41,6 +42,16 @@ async function loadReviews(slug: string, stars?: number): Promise<ReviewPage | n
   }
 }
 
+// Whether to offer the review form. Like the reviews, never worth failing the page over.
+async function loadEligibility(slug: string): Promise<ReviewEligibility | null> {
+  try {
+    return await getServerReviewEligibility(slug);
+  } catch (err) {
+    if (err instanceof ApiError) return null;
+    throw err;
+  }
+}
+
 export default async function ProductPage({ params, searchParams }: PageProps<"/products/[slug]">) {
   const product = await loadProduct((await params).slug);
   // Outside any try/catch: notFound() works by throwing.
@@ -49,9 +60,10 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
   // ?stars=5 filters the reviews; anything else is ignored rather than sent to the API.
   const rawStars = (await searchParams).stars;
   const stars = typeof rawStars === "string" && /^[1-5]$/.test(rawStars) ? Number(rawStars) : undefined;
-  const [related, reviews] = await Promise.all([
+  const [related, reviews, eligibility] = await Promise.all([
     searchProducts({ category: product.category.slug, sort: "featured", pageSize: 7 }),
     loadReviews(product.slug, stars),
+    loadEligibility(product.slug),
   ]);
   const more = related.items.filter((p) => p.id !== product.id).slice(0, 6);
   const images = product.images.length ? product.images : [product.imageUrl];
@@ -117,7 +129,7 @@ export default async function ProductPage({ params, searchParams }: PageProps<"/
         </aside>
       </div>
 
-      {reviews && <Reviews slug={product.slug} data={reviews} />}
+      {reviews && <Reviews slug={product.slug} data={reviews} eligibility={eligibility} />}
 
       {more.length > 0 && (
         <section aria-labelledby="more" className="mt-10 border-t border-border pt-6">

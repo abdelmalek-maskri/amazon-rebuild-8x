@@ -272,3 +272,7 @@ export async function listOrders(userId: string, page: number, pageSize: number)
     pageSize,
   };
 }
+
+export function hasPaidFor(userId: string, productId: string) {
+  return repo.hasPaidFor(userId, productId);
+}

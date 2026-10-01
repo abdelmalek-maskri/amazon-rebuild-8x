@@ -178,7 +178,22 @@ export function removeCartItem(itemId: string) {
   return apiFetch<Cart>(`/cart/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
 }
 
-export type Review = { id: string; rating: number; body: string; authorName: string; reviewedAt: string };
+export type Review = { id: string; rating: number; body: string; authorName: string; reviewedAt: string; verified: boolean };
+
+export type ReviewEligibility = {
+  canReview: boolean;
+  reason: "SIGN_IN" | "NOT_PURCHASED" | "ALREADY_REVIEWED" | null;
+  myReview: Pick<Review, "id" | "rating" | "body" | "reviewedAt"> | null;
+};
+
+// Depends on who's asking, so server code passes the session along.
+export function getReviewEligibility(slug: string, cookie?: string) {
+  return apiFetch<ReviewEligibility>(`/products/${encodeURIComponent(slug)}/reviews/eligibility`, cookie ? { headers: { Cookie: cookie } } : {});
+}
+
+export function createReview(slug: string, rating: number, body: string) {
+  return apiFetch<Review>(`/products/${encodeURIComponent(slug)}/reviews`, { method: "POST", body: JSON.stringify({ rating, body }) });
+}
 
 export type ReviewPage = {
   average: number;

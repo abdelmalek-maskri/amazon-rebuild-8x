@@ -41,7 +41,7 @@ describe("GET /products/:slug/reviews", () => {
       { stars: 1, count: 1 },
     ]);
     expect(res.body.items.map((r: { body: string }) => r.body)).toEqual(["Brilliant", "Good value", "Broke after a week", "Would not recommend!", "Love them"]);
-    expect(res.body.items[0]).toEqual({ id: expect.any(String), rating: 5, body: "Brilliant", authorName: "Ada", reviewedAt: "2025-01-05T00:00:00.000Z" });
+    expect(res.body.items[0]).toEqual({ id: expect.any(String), rating: 5, body: "Brilliant", authorName: "Ada", reviewedAt: "2025-01-05T00:00:00.000Z", verified: false });
   });
 
   it("filters by star level while the breakdown still covers every review", async () => {

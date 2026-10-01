@@ -152,6 +152,12 @@ Money and trust rules:
   `whsec_` secret in `api/.env` as `STRIPE_WEBHOOK_SECRET`; `WEB_URL` is where Stripe redirects.
   Test card 4242 4242 4242 4242, any future expiry, any CVC. Tests never call Stripe: they spy
   on `stripe.checkout.sessions.create` and sign webhook payloads with `generateTestHeaderString`.
+* Buyer-only reviews: `POST /products/:slug/reviews` needs a signed in shopper with a `paid`
+  order containing the product (asked through `orders/service.hasPaidFor`, not a cross-module
+  query). One review per shopper per product (`reviews_product_id_user_id_unique`), marked
+  `verified`; the product row is locked and `rating_avg`/`rating_count` recomputed from all
+  reviews in the same transaction. `GET .../reviews/eligibility` tells the page which state to
+  show (SIGN_IN, NOT_PURCHASED, ALREADY_REVIEWED, or the form).
 * Cancel and refund: `POST /orders/:id/cancel` (same access rule as viewing). Allowed only while
   paid and before simulated shipping (`SHIPS_AFTER_MS`, 30 min after payment). One transaction
   marks it `cancelled` and restocks; then `refundIfOwed()` calls Stripe with idempotency key

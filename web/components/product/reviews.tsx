@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Rating } from "@/components/ui/rating";
-import type { ReviewPage } from "@/lib/api";
+import type { ReviewEligibility, ReviewPage } from "@/lib/api";
+import { WriteReview } from "./write-review";
 import { cn } from "@/lib/cn";
 
 const dateFormat = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 
 // Amazon's layout: summary and histogram on the left, reviews on the right. Each bar is a link
 // that filters the list, and the filter lives in the URL like everything else.
-export function Reviews({ slug, data }: { slug: string; data: ReviewPage }) {
+export function Reviews({ slug, data, eligibility }: { slug: string; data: ReviewPage; eligibility: ReviewEligibility | null }) {
   const base = `/products/${slug}`;
   return (
     <section id="reviews" aria-labelledby="reviews-title" className="mt-10 scroll-mt-4 border-t border-border pt-6">
@@ -61,6 +62,7 @@ export function Reviews({ slug, data }: { slug: string; data: ReviewPage }) {
           ) : (
             <p className="mt-2 text-sm text-muted">No reviews yet.</p>
           )}
+          {eligibility && <WriteReview slug={slug} eligibility={eligibility} />}
         </div>
 
         {data.count > 0 && (
@@ -84,7 +86,11 @@ export function Reviews({ slug, data }: { slug: string; data: ReviewPage }) {
                     </span>
                     <span className="text-sm">{r.authorName}</span>
                   </div>
-                  <Rating value={r.rating} className="[&>span:first-child]:hidden" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Rating value={r.rating} className="[&>span:first-child]:hidden" />
+                    {/* Amazon's wording: only reviews from a paid order on this store get it. */}
+                    {r.verified && <span className="text-xs font-bold text-link-hover">Verified Purchase</span>}
+                  </div>
                   <p className="text-xs text-muted">Reviewed on {dateFormat.format(new Date(r.reviewedAt))}</p>
                   <p className="text-sm">{r.body}</p>
                 </li>
