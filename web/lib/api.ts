@@ -41,12 +41,15 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       signal: init.signal ?? AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {
-    const timedOut = err instanceof DOMException && err.name === "TimeoutError";
-    throw new ApiError(
-      0,
-      timedOut ? "TIMEOUT" : "NETWORK_ERROR",
-      timedOut ? "The store took too long to respond. Please try again." : "We couldn't reach the store. Check your connection and try again.",
-    );
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new ApiError(0, "TIMEOUT", "The store took too long to respond. Please try again.");
+    }
+    // fetch reports network failures as TypeError. Anything else must pass through untouched:
+    // Next.js throws its own signal from fetch to stop prerendering, and swallowing it breaks the build.
+    if (err instanceof TypeError) {
+      throw new ApiError(0, "NETWORK_ERROR", "We couldn't reach the store. Check your connection and try again.");
+    }
+    throw err;
   }
 
   const body: unknown = await res.json().catch(() => null);
@@ -61,4 +64,65 @@ export type Health = { status: "ok" | "error"; db: "ok" | "down" };
 
 export function getHealth() {
   return apiFetch<Health>("/health");
+}
+
+export type Category = { slug: string; name: string; productCount: number };
+
+export type Availability =
+  | { status: "in_stock" }
+  | { status: "low_stock"; left: number }
+  | { status: "out_of_stock" };
+
+export type ProductSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  brand: string | null;
+  priceCents: number;
+  imageUrl: string;
+  ratingAvg: number;
+  ratingCount: number;
+  availability: Availability;
+};
+
+export type ProductSort = "relevance" | "featured" | "price_asc" | "price_desc" | "rating" | "newest";
+
+export type ProductQuery = {
+  q?: string;
+  category?: string;
+  brand?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  inStock?: boolean;
+  sort?: ProductSort;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ProductPage = {
+  items: ProductSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  sort: ProductSort;
+  facets: {
+    categories: { slug: string; name: string; count: number }[];
+    brands: { name: string; count: number }[];
+    ratings: { min: number; count: number }[];
+  };
+};
+
+export function getCategories() {
+  return apiFetch<{ items: Category[] }>("/categories");
+}
+
+export function searchProducts(query: ProductQuery = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === "" || value === false) continue;
+    for (const v of Array.isArray(value) ? value : [value]) params.append(key, String(v));
+  }
+  const qs = params.toString();
+  return apiFetch<ProductPage>(`/products${qs ? `?${qs}` : ""}`);
 }

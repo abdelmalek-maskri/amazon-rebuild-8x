@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Design system", robots: { index: fal
 // Every base component in every state, for review at 375px and 1280px. Not linked from the store.
 export default function DesignPage() {
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-10 p-4 sm:p-8">
+    <div className="mx-auto flex max-w-5xl flex-col gap-10 p-4 sm:p-8">
       <h1 className="text-2xl font-bold">Design system</h1>
 
       <Section title="Colours">
@@ -131,7 +131,7 @@ export default function DesignPage() {
       <Section title="Toast">
         <ToastDemo />
       </Section>
-    </main>
+    </div>
   );
 }
 
