@@ -13,11 +13,6 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().regex(/^whsec_\w+$/, "must be a Stripe webhook signing secret (whsec_...)"),
   // Where Stripe sends shoppers back to after paying or cancelling.
   WEB_URL: z.url({ protocol: /^https?$/ }).transform((u) => u.replace(/\/$/, "")),
-  // Shared with the web app's proxy. Proves a request came through our own site, so its
-  // x-store-client-ip header (the shopper's real address) can be trusted. Optional: without it
-  // the API only ever uses the connection's own address.
-  // An empty value (as copied from .env.example) means "not set", not an invalid secret.
-  PROXY_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(32).optional()),
 });
 
 const parsed = schema.safeParse(process.env);
