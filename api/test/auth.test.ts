@@ -172,3 +172,26 @@ describe("baskets and accounts", () => {
     expect(res.body.itemCount).toBe(0);
   });
 });
+
+describe("rate limits behind the website's proxy", () => {
+  const SECRET = "test-proxy-secret-test-proxy-secret-0123";
+  const attempt = (agent: ReturnType<typeof request.agent>, headers: Record<string, string>) =>
+    agent.post("/auth/signin").set(headers).send({ email: "nobody@example.com", password: "guess" });
+
+  it("counts each shopper separately when the request comes through our site", async () => {
+    // One app (one set of counters), like production: every request arrives from the same proxy.
+    const agent = request.agent(serve());
+    const viaSite = (ip: string) => ({ "x-store-proxy-secret": SECRET, "x-store-client-ip": ip });
+    for (let i = 0; i < 10; i++) await attempt(agent, viaSite("203.0.113.7")).expect(401);
+    expect((await attempt(agent, viaSite("203.0.113.7"))).status).toBe(429);
+    // A different shopper behind the same proxy is not locked out by the first one.
+    expect((await attempt(agent, viaSite("198.51.100.20"))).status).toBe(401);
+  });
+
+  it("ignores a client address that doesn't come with the secret, so it can't be used to dodge the limit", async () => {
+    const agent = request.agent(serve());
+    for (let i = 0; i < 10; i++) await attempt(agent, { "x-store-client-ip": `203.0.113.${i + 1}`, "x-store-proxy-secret": "wrong" }).expect(401);
+    // Ten different made up addresses, one real one: still the same counter, so the 11th is refused.
+    expect((await attempt(agent, { "x-store-client-ip": "203.0.113.99" })).status).toBe(429);
+  });
+});

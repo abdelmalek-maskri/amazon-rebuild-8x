@@ -15,3 +15,7 @@ next-env.d.ts
 
 # Playwright MCP screenshots and snapshots
 .playwright-mcp/
+
+# Playwright end-to-end runs
+e2e/test-results/
+e2e/playwright-report/
