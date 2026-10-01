@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { addToCart, ApiError } from "@/lib/api";
+import { addToCart, ApiError, checkout } from "@/lib/api";
 
 // Stays on the product page: a toast confirms and links to the basket, instead of Amazon's
 // separate "Added to basket" page full of sponsored products.
@@ -14,6 +14,7 @@ export function AddToBasket({ productId, max }: { productId: string; max: number
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [buying, setBuying] = useState(false);
   const [refreshing, startRefresh] = useTransition();
 
   async function add() {
@@ -33,6 +34,20 @@ export function AddToBasket({ productId, max }: { productId: string; max: number
     }
   }
 
+  // Straight to payment for this item only; the basket is left as it is.
+  async function buy() {
+    setBuying(true);
+    setError("");
+    try {
+      const { url } = await checkout({ productId, quantity });
+      window.location.assign(url);
+    } catch (err) {
+      setBuying(false);
+      if (!(err instanceof ApiError)) throw err;
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <label className="flex items-center gap-2 text-sm">
@@ -49,8 +64,11 @@ export function AddToBasket({ productId, max }: { productId: string; max: number
           ))}
         </select>
       </label>
-      <Button fullWidth onClick={add} loading={saving || refreshing}>
+      <Button fullWidth onClick={add} loading={saving || refreshing} disabled={buying}>
         Add to basket
+      </Button>
+      <Button fullWidth variant="buy" onClick={buy} loading={buying} disabled={saving}>
+        {buying ? "Opening secure payment" : "Buy Now"}
       </Button>
       {error && (
         <p role="alert" className="text-sm text-danger">

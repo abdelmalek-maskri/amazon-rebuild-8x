@@ -6,11 +6,18 @@ import { AppError } from "../../lib/errors.js";
 import * as service from "./service.js";
 
 const OrderParams = z.object({ id: z.uuid() });
+// With a product, it's Buy Now; without one, the basket is checked out.
+const BuyNowBody = z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(10).default(1) });
 
 export const orderRoutes = Router();
 
 orderRoutes.post("/checkout", async (req, res) => {
   const userId = res.locals.user?.id;
+  if (req.body && "productId" in req.body) {
+    const { productId, quantity } = BuyNowBody.parse(req.body);
+    res.status(201).json(await service.buyNow(productId, quantity, userId));
+    return;
+  }
   res.status(201).json(await service.checkout(await resolveCartId(userId, readCartId(req)), userId));
 });
 

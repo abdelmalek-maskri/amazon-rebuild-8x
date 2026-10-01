@@ -195,8 +195,9 @@ export function getProductReviews(slug: string, stars?: number) {
   return apiFetch<ReviewPage>(`/products/${encodeURIComponent(slug)}/reviews${stars ? `?stars=${stars}` : ""}`);
 }
 
-export function checkout() {
-  return apiFetch<{ orderId: string; url: string }>("/checkout", { method: "POST" });
+// Without a product, checks out the basket. With one, it's Buy Now and the basket is left alone.
+export function checkout(buyNow?: { productId: string; quantity: number }) {
+  return apiFetch<{ orderId: string; url: string }>("/checkout", { method: "POST", ...(buyNow ? { body: JSON.stringify(buyNow) } : {}) });
 }
 
 export type OrderStatus = "pending" | "paid" | "needs_refund";

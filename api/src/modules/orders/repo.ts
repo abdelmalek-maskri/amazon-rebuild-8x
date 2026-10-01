@@ -26,9 +26,26 @@ export async function lockCartLines(tx: Tx, cartId: string) {
     .for("update", { of: products });
 }
 
+export async function lockProduct(tx: Tx, productId: string) {
+  const [row] = await tx
+    .select({
+      productId: products.id,
+      slug: products.slug,
+      title: products.title,
+      imageUrl: products.imageUrl,
+      priceCents: products.priceCents,
+      stock: products.stock,
+    })
+    .from(products)
+    .where(eq(products.id, productId))
+    .for("update");
+  return row;
+}
+
 export async function createOrder(
   tx: Tx,
-  cartId: string,
+  // Null for Buy Now: there is no basket to empty when it's paid.
+  cartId: string | null,
   userId: string | undefined,
   totalCents: number,
   items: { productId: string; title: string; unitPriceCents: number; quantity: number }[],
