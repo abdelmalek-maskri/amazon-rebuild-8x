@@ -1,28 +1,33 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { prefersDrawer, useCartDrawer } from "@/components/cart/cart-drawer";
 import { useToast } from "@/components/ui/toast";
 import { addToCart, ApiError, checkout } from "@/lib/api";
 
-// Stays on the product page: a toast confirms and links to the basket, instead of Amazon's
-// separate "Added to basket" page full of sponsored products.
+// Stays on the product page, instead of Amazon's separate "Added to basket" page full of sponsored
+// products: a side drawer with the basket on wide screens, a toast on phones.
 export function AddToBasket({ productId, max }: { productId: string; max: number }) {
   const router = useRouter();
   const toast = useToast();
+  const showDrawer = useCartDrawer();
+  const addRef = useRef<HTMLButtonElement>(null);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [buying, setBuying] = useState(false);
-  const [refreshing, startRefresh] = useTransition();
+  const [, startRefresh] = useTransition();
 
   async function add() {
     setSaving(true);
     setError("");
     try {
-      await addToCart(productId, quantity);
-      toast({ title: quantity === 1 ? "Added to basket" : `${quantity} added to basket`, action: { label: "View basket", href: "/cart" } });
+      // The API answers with the whole basket, so the drawer shows exactly what the server holds.
+      const cart = await addToCart(productId, quantity);
+      if (prefersDrawer()) showDrawer(cart, productId, addRef.current);
+      else toast({ title: quantity === 1 ? "Added to basket" : `${quantity} added to basket`, action: { label: "View basket", href: "/cart" } });
       // Re-render the server parts (header count) from the server's own cart, not a local guess.
       startRefresh(() => router.refresh());
     } catch (err) {
@@ -49,27 +54,30 @@ export function AddToBasket({ productId, max }: { productId: string; max: number
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <label className="flex items-center gap-2 text-sm">
-        <span>Quantity</span>
-        <select
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className="min-h-11 cursor-pointer rounded-lg border border-border bg-page px-3 shadow-sm md:min-h-9"
-        >
-          {Array.from({ length: max }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Button fullWidth onClick={add} loading={saving || refreshing} disabled={buying}>
-        Add to basket
-      </Button>
-      <Button fullWidth variant="buy" onClick={buy} loading={buying} disabled={saving}>
-        {buying ? "Opening secure payment" : "Buy Now"}
-      </Button>
+    <div className="flex flex-col gap-2">
+      {/* One row on wider screens: quantity, then the two actions side by side. */}
+      <div className="grid gap-3 sm:grid-cols-[auto_1fr_1fr] sm:items-end">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-xs text-muted">Quantity</span>
+          <select
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className="min-h-11 cursor-pointer rounded-lg border border-border bg-page px-3 shadow-sm"
+          >
+            {Array.from({ length: max }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button ref={addRef} fullWidth onClick={add} loading={saving} disabled={buying}>
+          Add to basket
+        </Button>
+        <Button fullWidth variant="buy" onClick={buy} loading={buying} disabled={saving}>
+          {buying ? "Opening payment" : "Buy Now"}
+        </Button>
+      </div>
       {error && (
         <p role="alert" className="text-sm text-danger">
           {error}

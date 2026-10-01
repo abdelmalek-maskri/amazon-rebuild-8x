@@ -86,6 +86,10 @@ Two apps, one repo, no npm workspaces (Vercel builds `web/`, Railway builds `api
   store) for checking at 375px and 1280px. `useToast()` needs the `ToastProvider` in the root
   layout. Product images must come from `cdn.dummyjson.com` (`images.remotePatterns`); use
   `preload`, not the deprecated `priority`, on above-the-fold images.
+  Cart drawer: on screens 768px and wider, Add to basket opens `components/cart/cart-drawer.tsx`
+  (phones keep the toast). It is a native modal `<dialog>`: the browser handles focus trapping,
+  Escape and the inert page. It renders the cart the add request returned, and it focuses the
+  opener on close because a button that disables itself while loading has already lost focus.
   Search state lives only in the URL. `web/lib/search-params.ts` parses it (bad values are
   dropped, never sent to the API) and builds every filter, sort and page link with
   `searchHref(state, patch)`, which resets to page 1 unless the patch sets `page`. Filters are
