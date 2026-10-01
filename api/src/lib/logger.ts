@@ -16,4 +16,15 @@ export const httpLogger = pinoHttp({
     res.setHeader("X-Request-Id", id);
     return id;
   },
+  // Railway's health check hits /health every few seconds; only log it when it fails.
+  customLogLevel: (req, res, err) => {
+    if (err || res.statusCode >= 500) return "error";
+    if (res.statusCode >= 400) return "warn";
+    return req.url === "/health" ? "silent" : "info";
+  },
+  // One short line per request. Headers are left out on purpose: they are noisy and can carry secrets.
+  serializers: {
+    req: (req: { id: string; method: string; url: string }) => ({ id: req.id, method: req.method, url: req.url }),
+    res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+  },
 });
