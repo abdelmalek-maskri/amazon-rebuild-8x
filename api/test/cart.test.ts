@@ -33,6 +33,8 @@ describe("cart", () => {
     expect(res.body).toMatchObject({ itemCount: 2, subtotalCents: 3998 });
     expect(res.body.items[0]).toMatchObject({ quantity: 2, lineTotalCents: 3998, maxQuantity: 5 });
     expect(res.body.items[0].product).not.toHaveProperty("stock");
+    expect(res.body.items[0].product.description).toBe("A product for tests");
+    expect(res.body.items[0].product.categorySlug).toMatch(/^cat-/);
   });
 
   it("merges a second add of the same product into one line", async () => {

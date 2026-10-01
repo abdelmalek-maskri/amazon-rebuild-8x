@@ -1,6 +1,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { cartItems, carts, products } from "../../db/schema.js";
+import { cartItems, carts, categories, products } from "../../db/schema.js";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -20,14 +20,18 @@ export async function listLines(cartId: string) {
         id: products.id,
         slug: products.slug,
         title: products.title,
+        description: products.description,
         brand: products.brand,
         imageUrl: products.imageUrl,
         priceCents: products.priceCents,
         stock: products.stock,
+        // Lets the basket page suggest products from the same departments.
+        categorySlug: categories.slug,
       },
     })
     .from(cartItems)
     .innerJoin(products, eq(cartItems.productId, products.id))
+    .innerJoin(categories, eq(products.categoryId, categories.id))
     .where(eq(cartItems.cartId, cartId))
     .orderBy(asc(cartItems.createdAt), asc(cartItems.id));
 }
